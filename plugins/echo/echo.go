@@ -11,21 +11,24 @@ func (ec *EchoCommand) GetName() string {
 	return "echo"
 }
 
-func (ec *EchoCommand) RunCommand(bot *quadlek.Bot, msg *slack.Msg, parsedMsg string) {
+func (ec *EchoCommand) RunCommand(bot *quadlek.Bot, msg *slack.Msg, parsedMsg string, store *quadlek.Store) {
 	bot.Respond(msg, parsedMsg)
 }
 
 type Plugin struct {
 	Commands []quadlek.Command
-	Hooks    []quadlek.Hook
 }
 
-func (p Plugin) GetCommands() []quadlek.Command {
+func (p *Plugin) GetCommands() []quadlek.Command {
 	return p.Commands
 }
 
-func (p Plugin) GetHooks() []quadlek.Hook {
-	return p.Hooks
+func (p *Plugin) GetHooks() []quadlek.Hook {
+	return nil
+}
+
+func (p *Plugin) GetId() string {
+	return "286647df-8085-48ae-936e-2190783199db"
 }
 
 func Register() quadlek.Plugin {

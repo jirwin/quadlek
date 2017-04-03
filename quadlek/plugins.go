@@ -10,14 +10,25 @@ import (
 
 type Command interface {
 	GetName() string
-	RunCommand(bot *Bot, msg *slack.Msg, parsedMsg string)
+	RunCommand(bot *Bot, msg *slack.Msg, parsedMsg string, store *Store)
+}
+
+type registeredCommand struct {
+	PluginId string
+	Command  Command
 }
 
 type Hook interface {
-	RunHook(bot *Bot, msg *slack.Msg)
+	RunHook(bot *Bot, msg *slack.Msg, store *Store)
+}
+
+type registeredHook struct {
+	PluginId string
+	Hook     Hook
 }
 
 type Plugin interface {
+	GetId() string
 	GetCommands() []Command
 	GetHooks() []Hook
 }
@@ -42,7 +53,7 @@ func (b *Bot) ParseMessage(msg string) (string, string) {
 	return cmd, strings.Join(msgText, " ")
 }
 
-func (b *Bot) GetCommand(cmdText string) Command {
+func (b *Bot) GetCommand(cmdText string) *registeredCommand {
 	if cmdText == "" {
 		return nil
 	}
@@ -60,11 +71,17 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 		if ok {
 			return errors.New(fmt.Sprintf("Command already exists: %s", command.GetName()))
 		}
-		b.commands[command.GetName()] = command
+		b.commands[command.GetName()] = &registeredCommand{
+			PluginId: plugin.GetId(),
+			Command:  command,
+		}
 	}
 
 	for _, hook := range plugin.GetHooks() {
-		b.hooks = append(b.hooks, hook)
+		b.hooks = append(b.hooks, &registeredHook{
+			PluginId: plugin.GetId(),
+			Hook:     hook,
+		})
 	}
 
 	return nil
@@ -77,11 +94,20 @@ func (b *Bot) DispatchCommand(msg *slack.Msg) {
 		return
 	}
 
-	go cmd.RunCommand(b, msg, parsedMsg)
+	store := &Store{
+		db:       b.db,
+		pluginId: cmd.PluginId,
+	}
+
+	go cmd.Command.RunCommand(b, msg, parsedMsg, store)
 }
 
 func (b *Bot) DispatchHooks(msg *slack.Msg) {
 	for _, hook := range b.hooks {
-		go hook.RunHook(b, msg)
+		store := &Store{
+			db:       b.db,
+			pluginId: hook.PluginId,
+		}
+		go hook.Hook.RunHook(b, msg, store)
 	}
 }

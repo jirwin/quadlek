@@ -2,7 +2,9 @@ package quadlek
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/boltdb/bolt"
 	"github.com/nlopes/slack"
 )
 
@@ -13,8 +15,9 @@ type Bot struct {
 	channels map[string]slack.Channel
 	username string
 	userId   string
-	commands map[string]Command
-	hooks    []Hook
+	commands map[string]*registeredCommand
+	hooks    []*registeredHook
+	db       *bolt.DB
 }
 
 func (b *Bot) Respond(msg *slack.Msg, resp string) {
@@ -55,7 +58,6 @@ func (b *Bot) HandleEvents() {
 				delete(b.channels, ev.Channel)
 
 			case *slack.MessageEvent:
-				fmt.Println(ev.Msg.Text)
 				if b.MsgToBot(ev.Msg.Text) {
 					b.DispatchCommand(&ev.Msg)
 				}
@@ -89,15 +91,24 @@ func (b *Bot) Start() {
 }
 
 func (b *Bot) Stop() {
+	if b.db != nil {
+		b.db.Close()
+	}
 	b.rtm.Disconnect()
 }
 
-func NewBot(apiKey string) *Bot {
+func NewBot(apiKey string, dbPath string) (*Bot, error) {
+	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
+	if err != nil {
+		return nil, err
+	}
+
 	return &Bot{
 		apiKey:   apiKey,
 		api:      slack.New(apiKey),
 		channels: make(map[string]slack.Channel, 10),
-		commands: make(map[string]Command),
-		hooks:    []Hook{},
-	}
+		commands: make(map[string]*registeredCommand),
+		hooks:    []*registeredHook{},
+		db:       db,
+	}, nil
 }

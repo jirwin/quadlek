@@ -26,3 +26,5 @@ _testmain.go
 *.iml
 
 main.go
+main
+*.db
