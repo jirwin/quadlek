@@ -20,6 +20,10 @@ type Bot struct {
 	db       *bolt.DB
 }
 
+func (b *Bot) GetUserId() string {
+	return b.userId
+}
+
 func (b *Bot) Respond(msg *slack.Msg, resp string) {
 	b.rtm.SendMessage(b.rtm.NewOutgoingMessage(fmt.Sprintf("<@%s>: %s", msg.User, resp), msg.Channel))
 }

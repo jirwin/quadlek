@@ -9,17 +9,11 @@ type Store struct {
 
 func (s *Store) Update(key string, value []byte) error {
 	err := s.db.Update(func(tx *bolt.Tx) error {
-		rootBkt, err := tx.CreateBucketIfNotExists([]byte("plugins"))
-		if err != nil {
-			return err
-		}
+		rootBkt := tx.Bucket([]byte("plugins"))
 
-		pluginBkt, err := rootBkt.CreateBucketIfNotExists([]byte(s.pluginId))
-		if err != nil {
-			return err
-		}
+		pluginBkt := rootBkt.Bucket([]byte(s.pluginId))
 
-		err = pluginBkt.Put([]byte(key), value)
+		err := pluginBkt.Put([]byte(key), value)
 		if err != nil {
 			return err
 		}
@@ -36,16 +30,9 @@ func (s *Store) Update(key string, value []byte) error {
 func (s *Store) GetAndUpdate(key string, updateFunc func([]byte) ([]byte, error)) error {
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		stringKey := []byte(key)
-		rootBkt, err := tx.CreateBucketIfNotExists([]byte("plugins"))
-		if err != nil {
-			return err
-		}
+		rootBkt := tx.Bucket([]byte("plugins"))
 
-		println(s.pluginId)
-		pluginBkt, err := rootBkt.CreateBucketIfNotExists([]byte(s.pluginId))
-		if err != nil {
-			return err
-		}
+		pluginBkt := rootBkt.Bucket([]byte(s.pluginId))
 
 		val := pluginBkt.Get(stringKey)
 		updateVal, err := updateFunc(val)
@@ -71,19 +58,33 @@ func (s *Store) GetAndUpdate(key string, updateFunc func([]byte) ([]byte, error)
 func (s *Store) Get(key string, getFunc func([]byte)) error {
 	err := s.db.View(func(tx *bolt.Tx) error {
 		stringKey := []byte(key)
+		rootBkt := tx.Bucket([]byte("plugins"))
+
+		pluginBkt := rootBkt.Bucket([]byte(s.pluginId))
+
+		val := pluginBkt.Get(stringKey)
+		getFunc(val)
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *Bot) InitPluginBucket(pluginId string) error {
+	err := b.db.Update(func(tx *bolt.Tx) error {
 		rootBkt, err := tx.CreateBucketIfNotExists([]byte("plugins"))
 		if err != nil {
 			return err
 		}
 
-		pluginBkt, err := rootBkt.CreateBucketIfNotExists([]byte(s.pluginId))
+		_, err = rootBkt.CreateBucketIfNotExists([]byte(pluginId))
 		if err != nil {
 			return err
 		}
-
-		val := pluginBkt.Get(stringKey)
-		getFunc(val)
-
 		return nil
 	})
 	if err != nil {

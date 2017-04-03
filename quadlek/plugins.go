@@ -66,6 +66,15 @@ func (b *Bot) GetCommand(cmdText string) *registeredCommand {
 }
 
 func (b *Bot) RegisterPlugin(plugin Plugin) error {
+	if plugin.GetId() == "" {
+		return errors.New("Must provide a unique plugin id.")
+	}
+
+	err := b.InitPluginBucket(plugin.GetId())
+	if err != nil {
+		return err
+	}
+
 	for _, command := range plugin.GetCommands() {
 		_, ok := b.commands[command.GetName()]
 		if ok {

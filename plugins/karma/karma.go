@@ -11,6 +11,38 @@ import (
 	"github.com/nlopes/slack"
 )
 
+type KarmaScoreCommand struct{}
+
+func (kh *KarmaScoreCommand) GetName() string {
+	return "score"
+}
+
+func (kh *KarmaScoreCommand) RunCommand(bot *quadlek.Bot, msg *slack.Msg, parsedMsg string, store *quadlek.Store) {
+	tokens := strings.Split(parsedMsg, " ")
+	if len(tokens) != 1 {
+		bot.Respond(msg, fmt.Sprintf("Invalid syntax. Example: %s score jirwin", bot.GetUserId()))
+	}
+
+	item := tokens[0]
+
+	err := store.Get(item, func(val []byte) {
+		var score string
+
+		score = string(val)
+		if val == nil {
+			score = "0"
+		}
+		bot.Say(msg.Channel, fmt.Sprintf("%s: %s", item, score))
+	})
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err":  err,
+			"item": item,
+		}).Error("unable to get score")
+		bot.Respond(msg, fmt.Sprintf("Unable to get score for %s.", item))
+	}
+}
+
 type KarmaHook struct{}
 
 var (
@@ -22,66 +54,69 @@ func (kh *KarmaHook) RunHook(bot *quadlek.Bot, msg *slack.Msg, store *quadlek.St
 	tokens := strings.Split(msg.Text, " ")
 
 	for _, t := range tokens {
-		go func(token string) {
-			if match := ppRegex.FindString(t); match != "" {
-				item := match[:len(match)-2]
-				err := store.GetAndUpdate(item, func(val []byte) ([]byte, error) {
-					if val == nil {
-						return []byte("1"), nil
-					}
-
-					karma, err := strconv.Atoi(string(val[:]))
-					if err != nil {
-						return nil, err
-					}
-
-					bot.Respond(msg, fmt.Sprintf("Incremented %s", item))
-
-					karma++
-					karmaStr := strconv.Itoa(karma)
-
-					return []byte(karmaStr), nil
-				})
-				if err != nil {
-					log.WithFields(log.Fields{
-						"err": err,
-					}).Errorf("Error incrementing value: %s", item)
+		match := ppRegex.FindString(t)
+		if match != "" {
+			item := match[:len(match)-2]
+			err := store.GetAndUpdate(item, func(val []byte) ([]byte, error) {
+				if val == nil {
+					return []byte("1"), nil
 				}
-			} else if match := mmRegex.FindString(t); match != "" {
-				item := match[:len(match)-2]
-				err := store.GetAndUpdate(item, func(val []byte) ([]byte, error) {
-					if val == nil {
-						return []byte("-1"), nil
-					}
 
-					karma, err := strconv.Atoi(string(val[:]))
-					if err != nil {
-						return nil, err
-					}
-
-					karma--
-					karmaStr := strconv.Itoa(karma)
-
-					bot.Respond(msg, fmt.Sprintf("Decremented %s", item))
-
-					return []byte(karmaStr), nil
-				})
+				karma, err := strconv.Atoi(string(val[:]))
 				if err != nil {
-					log.WithFields(log.Fields{
-						"err": err,
-					}).Errorf("Error decrementing value: %s", item)
+					return nil, err
 				}
+
+				bot.Respond(msg, fmt.Sprintf("Incremented %s", t))
+
+				karma++
+				karmaStr := strconv.Itoa(karma)
+
+				return []byte(karmaStr), nil
+			})
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err": err,
+				}).Errorf("Error incrementing value: %s", t)
 			}
-		}(t)
+		}
+
+		match = mmRegex.FindString(t)
+		if match != "" {
+			item := match[:len(match)-2]
+			err := store.GetAndUpdate(item, func(val []byte) ([]byte, error) {
+				if val == nil {
+					return []byte("-1"), nil
+				}
+
+				karma, err := strconv.Atoi(string(val[:]))
+				if err != nil {
+					return nil, err
+				}
+
+				karma--
+				karmaStr := strconv.Itoa(karma)
+
+				bot.Respond(msg, fmt.Sprintf("Decremented %s", t))
+
+				return []byte(karmaStr), nil
+			})
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err": err,
+				}).Errorf("Error decrementing value: %s", t)
+			}
+		}
 	}
 }
 
 type Plugin struct {
-	Hooks []quadlek.Hook
+	Commands []quadlek.Command
+	Hooks    []quadlek.Hook
 }
 
 func (p *Plugin) GetCommands() []quadlek.Command {
-	return []quadlek.Command{}
+	return p.Commands
 }
 
 func (p *Plugin) GetHooks() []quadlek.Hook {
@@ -94,6 +129,7 @@ func (p *Plugin) GetId() string {
 
 func Register() quadlek.Plugin {
 	return &Plugin{
-		Hooks: []quadlek.Hook{&KarmaHook{}},
+		Commands: []quadlek.Command{&KarmaScoreCommand{}},
+		Hooks:    []quadlek.Hook{&KarmaHook{}},
 	}
 }
