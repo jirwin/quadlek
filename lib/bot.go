@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"github.com/nlopes/slack"
 	"strings"
+	"github.com/jirwin/quadlek/plugins"
 )
 
 type Bot struct {
 	ApiKey   string
 	Api      *slack.Client
+	Rtm	*slack.RTM
 	Channels map[string]slack.Channel
 	Username string
 	UserID   string
@@ -23,20 +25,36 @@ func (b *Bot) ParseMessage(msg string) []string {
 	return strings.Split(parsedMsg, " ")
 }
 
-func (b *Bot) HandleEvents(rtm *slack.RTM) {
+func (b *Bot) RegisterPlugin(p *Plugin) {}
+
+func (b *Bot) Respond(rtm *slack.RTM, msg slack.Msg, resp string) {
+	rtm.SendMessage(rtm.NewOutgoingMessage(fmt.Sprintf("<@%s>: %s", msg.User, resp), msg.Channel))
+}
+
+func (b *Bot) Say(rtm *slack.RTM, channel string, resp string) {
+	rtm.SendMessage(rtm.NewOutgoingMessage(fmt.Sprintf("%s", resp), channel))
+}
+
+func (b *Bot) React(msg slack.Msg, reaction string) {
+	b.Api.AddReaction(reaction, slack.NewRefToMessage(msg.Channel, msg.Timestamp))
+}
+
+func (b *Bot) HandleEvents() {
 	for {
 		select {
-		case msg := <-rtm.IncomingEvents:
+		case msg := <-b.Rtm.IncomingEvents:
 			fmt.Print("Event Received: ")
 			switch ev := msg.Data.(type) {
 			case *slack.HelloEvent:
 
 			case *slack.ConnectedEvent:
 				fmt.Println("Infos:", ev.Info.Channels)
+				b.Username = ev.Info.User.Name
+				b.UserID = ev.Info.User.ID
 				for _, channel := range ev.Info.Channels {
 					if channel.IsMember {
 						b.Channels[channel.ID] = channel
-						rtm.SendMessage(rtm.NewOutgoingMessage("I'm Alive!", channel.ID))
+						b.Say(b.Rtm, channel.ID, "I'm alive!")
 
 					}
 				}
@@ -45,14 +63,18 @@ func (b *Bot) HandleEvents(rtm *slack.RTM) {
 			case *slack.ChannelJoinedEvent:
 				fmt.Printf("Joining channel: %s\n", ev.Channel.Name)
 				b.Channels[ev.Channel.ID] = ev.Channel
-				rtm.SendMessage(rtm.NewOutgoingMessage("Hi!", ev.Channel.ID))
+				b.Say(b.Rtm, ev.Channel.ID, "I'm alive!")
 
 			case *slack.ChannelLeftEvent:
 				fmt.Printf("Leaving channel: %s\n", ev.Channel)
 				delete(b.Channels, ev.Channel)
 
 			case *slack.MessageEvent:
-				fmt.Printf("Message: %v\n", ev)
+				fmt.Println(ev.Msg.Text)
+				if (b.MsgToBot(ev.Msg.Text)) {
+					b.React(ev.Msg, "partyparrot")
+					b.Respond(b.Rtm, ev.Msg, "hi to you!")
+				}
 
 			case *slack.PresenceChangeEvent:
 				fmt.Printf("Presence Change: %v\n", ev)
@@ -74,9 +96,9 @@ func (b *Bot) HandleEvents(rtm *slack.RTM) {
 }
 
 func (b *Bot) StartRTM() {
-	rtm := b.Api.NewRTM()
-	go rtm.ManageConnection()
-	go b.HandleEvents(rtm)
+	b.Rtm = b.Api.NewRTM()
+	go b.Rtm.ManageConnection()
+	go b.HandleEvents()
 }
 
 func NewBot(apiKey string) *Bot {
