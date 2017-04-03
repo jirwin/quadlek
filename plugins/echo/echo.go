@@ -1,44 +1,35 @@
 package echo
 
 import (
-	"github.com/jirwin/quadlek/lib"
-	"strings"
+	"github.com/jirwin/quadlek/quadlek"
+	"github.com/nlopes/slack"
 )
 
-type EchoCommand struct {}
+type EchoCommand struct{}
 
-func (ec *EchoCommand) GetName() (string) {
+func (ec *EchoCommand) GetName() string {
 	return "echo"
 }
 
-func (ec *EchoCommand) RunCommand(bot *lib.Bot, from string, to string, msg []string) {
-	bot.Rtm.SendMessage(bot.Rtm.NewOutgoingMessage(strings.Join(msg, " "), to))
+func (ec *EchoCommand) RunCommand(bot *quadlek.Bot, msg *slack.Msg, parsedMsg string) {
+	bot.Respond(msg, parsedMsg)
 }
 
 type Plugin struct {
-	Commands []lib.Command
-	Hooks []lib.Hook
+	Commands []quadlek.Command
+	Hooks    []quadlek.Hook
 }
 
-func (p *Plugin) GetCommands() ([]lib.Command) {
+func (p Plugin) GetCommands() []quadlek.Command {
 	return p.Commands
 }
 
-func (p *Plugin) RunCommands(bot *lib.Bot, from string, to string, msg []string) {
-	for _, c := range p.Commands {
-		go c.RunCommand(bot, from, to, msg)
-	}
+func (p Plugin) GetHooks() []quadlek.Hook {
+	return p.Hooks
 }
 
-func (p *Plugin) RunHooks(bot *lib.Bot, from string, to string, msg []string) {
-	for _, h := range p.Hooks {
-		go h.RunHook(bot, from, to, msg)
-	}
-}
-
-func Register() (*Plugin) {
+func Register() quadlek.Plugin {
 	return &Plugin{
-		Commands: []lib.Command{&EchoCommand{}},
-		Hooks: nil,
+		Commands: []quadlek.Command{&EchoCommand{}},
 	}
 }
