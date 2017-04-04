@@ -99,6 +99,7 @@ func (b *Bot) Start() {
 	b.rtm = b.api.NewRTM()
 	go b.rtm.ManageConnection()
 	go b.HandleEvents()
+	go b.WebhookServer()
 }
 
 func (b *Bot) Stop() {

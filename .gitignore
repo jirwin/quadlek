@@ -25,6 +25,6 @@ _testmain.go
 .idea
 *.iml
 
-main.go
-main
+quadlekBot.go
+quadlekBot
 *.db
