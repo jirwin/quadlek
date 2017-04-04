@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"strings"
 
+	"context"
+
 	"github.com/nlopes/slack"
 )
 
 type Command interface {
 	GetName() string
-	RunCommand(bot *Bot, msg *slack.Msg, parsedMsg string, store *Store)
+	Channel() chan<- *CommandMsg
+	Run(ctx context.Context)
 }
 
 type registeredCommand struct {
@@ -19,7 +22,21 @@ type registeredCommand struct {
 }
 
 type Hook interface {
-	RunHook(bot *Bot, msg *slack.Msg, store *Store)
+	Channel() chan<- *HookMsg
+	Run(ctx context.Context)
+}
+
+type CommandMsg struct {
+	Bot       *Bot
+	Msg       *slack.Msg
+	ParsedMsg string
+	Store     *Store
+}
+
+type HookMsg struct {
+	Bot   *Bot
+	Msg   *slack.Msg
+	Store *Store
 }
 
 type registeredHook struct {
@@ -84,6 +101,12 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 			PluginId: plugin.GetId(),
 			Command:  command,
 		}
+		go func() {
+			b.wg.Add(1)
+			defer b.wg.Done()
+
+			command.Run(b.ctx)
+		}()
 	}
 
 	for _, hook := range plugin.GetHooks() {
@@ -91,6 +114,12 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 			PluginId: plugin.GetId(),
 			Hook:     hook,
 		})
+		go func() {
+			b.wg.Add(1)
+			defer b.wg.Done()
+
+			hook.Run(b.ctx)
+		}()
 	}
 
 	return nil
@@ -108,7 +137,12 @@ func (b *Bot) DispatchCommand(msg *slack.Msg) {
 		pluginId: cmd.PluginId,
 	}
 
-	go cmd.Command.RunCommand(b, msg, parsedMsg, store)
+	cmd.Command.Channel() <- &CommandMsg{
+		Bot:       b,
+		Msg:       msg,
+		ParsedMsg: parsedMsg,
+		Store:     store,
+	}
 }
 
 func (b *Bot) DispatchHooks(msg *slack.Msg) {
@@ -117,6 +151,11 @@ func (b *Bot) DispatchHooks(msg *slack.Msg) {
 			db:       b.db,
 			pluginId: hook.PluginId,
 		}
-		go hook.Hook.RunHook(b, msg, store)
+
+		hook.Hook.Channel() <- &HookMsg{
+			Bot:   b,
+			Msg:   msg,
+			Store: store,
+		}
 	}
 }

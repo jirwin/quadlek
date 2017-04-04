@@ -6,107 +6,146 @@ import (
 	"strconv"
 	"strings"
 
+	"context"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/jirwin/quadlek/quadlek"
-	"github.com/nlopes/slack"
 )
 
-type KarmaScoreCommand struct{}
+type KarmaScoreCommand struct {
+	channel chan *quadlek.CommandMsg
+}
 
 func (kh *KarmaScoreCommand) GetName() string {
 	return "score"
 }
 
-func (kh *KarmaScoreCommand) RunCommand(bot *quadlek.Bot, msg *slack.Msg, parsedMsg string, store *quadlek.Store) {
-	tokens := strings.Split(parsedMsg, " ")
-	if len(tokens) != 1 {
-		bot.Respond(msg, fmt.Sprintf("Invalid syntax. Example: %s score jirwin", bot.GetUserId()))
-	}
+func (kh *KarmaScoreCommand) Channel() chan<- *quadlek.CommandMsg {
+	return kh.channel
+}
 
-	item := tokens[0]
+func (kh *KarmaScoreCommand) Run(ctx context.Context) {
+	for {
+		select {
+		case cmdMsg := <-kh.channel:
+			tokens := strings.Split(cmdMsg.ParsedMsg, " ")
+			if len(tokens) != 1 {
+				cmdMsg.Bot.Respond(cmdMsg.Msg, fmt.Sprintf("Invalid syntax. Example: %s score jirwin", cmdMsg.Bot.GetUserId()))
+			}
 
-	err := store.Get(item, func(val []byte) {
-		var score string
+			item := tokens[0]
 
-		score = string(val)
-		if val == nil {
-			score = "0"
+			err := cmdMsg.Store.Get(item, func(val []byte) {
+				var score string
+
+				score = string(val)
+				if val == nil {
+					score = "0"
+				}
+				cmdMsg.Bot.Say(cmdMsg.Msg.Channel, fmt.Sprintf("%s: %s", item, score))
+			})
+			if err != nil {
+				log.WithFields(log.Fields{
+					"err":  err,
+					"item": item,
+				}).Error("unable to get score")
+				cmdMsg.Bot.Respond(cmdMsg.Msg, fmt.Sprintf("Unable to get score for %s.", item))
+			}
+
+		case <-ctx.Done():
+			log.Info("Exiting KarmaScoreCommand.")
+			return
 		}
-		bot.Say(msg.Channel, fmt.Sprintf("%s: %s", item, score))
-	})
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err":  err,
-			"item": item,
-		}).Error("unable to get score")
-		bot.Respond(msg, fmt.Sprintf("Unable to get score for %s.", item))
 	}
 }
 
-type KarmaHook struct{}
+func MakeScoreCommand() quadlek.Command {
+	return &KarmaScoreCommand{
+		channel: make(chan *quadlek.CommandMsg),
+	}
+}
+
+type KarmaHook struct {
+	channel chan *quadlek.HookMsg
+}
 
 var (
 	ppRegex = regexp.MustCompile(".+\\+\\+$")
 	mmRegex = regexp.MustCompile(".+--$")
 )
 
-func (kh *KarmaHook) RunHook(bot *quadlek.Bot, msg *slack.Msg, store *quadlek.Store) {
-	tokens := strings.Split(msg.Text, " ")
+func (kh *KarmaHook) Channel() chan<- *quadlek.HookMsg {
+	return kh.channel
+}
 
-	for _, t := range tokens {
-		match := ppRegex.FindString(t)
-		if match != "" {
-			item := match[:len(match)-2]
-			err := store.GetAndUpdate(item, func(val []byte) ([]byte, error) {
-				if val == nil {
-					return []byte("1"), nil
+func (kh *KarmaHook) Run(ctx context.Context) {
+	for {
+		select {
+		case hookMsg := <-kh.channel:
+			tokens := strings.Split(hookMsg.Msg.Text, " ")
+
+			for _, t := range tokens {
+				match := ppRegex.FindString(t)
+				if match != "" {
+					item := match[:len(match)-2]
+					err := hookMsg.Store.GetAndUpdate(item, func(val []byte) ([]byte, error) {
+						if val == nil {
+							return []byte("1"), nil
+						}
+
+						karma, err := strconv.Atoi(string(val[:]))
+						if err != nil {
+							return nil, err
+						}
+
+						karma++
+						karmaStr := strconv.Itoa(karma)
+
+						return []byte(karmaStr), nil
+					})
+					if err != nil {
+						log.WithFields(log.Fields{
+							"err": err,
+						}).Errorf("Error incrementing value: %s", t)
+					}
 				}
 
-				karma, err := strconv.Atoi(string(val[:]))
-				if err != nil {
-					return nil, err
+				match = mmRegex.FindString(t)
+				if match != "" {
+					item := match[:len(match)-2]
+					err := hookMsg.Store.GetAndUpdate(item, func(val []byte) ([]byte, error) {
+						if val == nil {
+							return []byte("-1"), nil
+						}
+
+						karma, err := strconv.Atoi(string(val[:]))
+						if err != nil {
+							return nil, err
+						}
+
+						karma--
+						karmaStr := strconv.Itoa(karma)
+
+						return []byte(karmaStr), nil
+					})
+					if err != nil {
+						log.WithFields(log.Fields{
+							"err": err,
+						}).Errorf("Error decrementing value: %s", t)
+					}
 				}
-
-				bot.Respond(msg, fmt.Sprintf("Incremented %s", t))
-
-				karma++
-				karmaStr := strconv.Itoa(karma)
-
-				return []byte(karmaStr), nil
-			})
-			if err != nil {
-				log.WithFields(log.Fields{
-					"err": err,
-				}).Errorf("Error incrementing value: %s", t)
 			}
+
+		case <-ctx.Done():
+			log.Info("Exiting Karma Hook.")
+			return
 		}
+	}
+}
 
-		match = mmRegex.FindString(t)
-		if match != "" {
-			item := match[:len(match)-2]
-			err := store.GetAndUpdate(item, func(val []byte) ([]byte, error) {
-				if val == nil {
-					return []byte("-1"), nil
-				}
-
-				karma, err := strconv.Atoi(string(val[:]))
-				if err != nil {
-					return nil, err
-				}
-
-				karma--
-				karmaStr := strconv.Itoa(karma)
-
-				bot.Respond(msg, fmt.Sprintf("Decremented %s", t))
-
-				return []byte(karmaStr), nil
-			})
-			if err != nil {
-				log.WithFields(log.Fields{
-					"err": err,
-				}).Errorf("Error decrementing value: %s", t)
-			}
-		}
+func MakeKarmaHook() quadlek.Hook {
+	return &KarmaHook{
+		channel: make(chan *quadlek.HookMsg),
 	}
 }
 
@@ -129,7 +168,7 @@ func (p *Plugin) GetId() string {
 
 func Register() quadlek.Plugin {
 	return &Plugin{
-		Commands: []quadlek.Command{&KarmaScoreCommand{}},
-		Hooks:    []quadlek.Hook{&KarmaHook{}},
+		Commands: []quadlek.Command{MakeScoreCommand()},
+		Hooks:    []quadlek.Hook{MakeKarmaHook()},
 	}
 }

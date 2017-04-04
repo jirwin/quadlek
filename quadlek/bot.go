@@ -4,6 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"context"
+
+	"sync"
+
 	"github.com/boltdb/bolt"
 	"github.com/nlopes/slack"
 )
@@ -18,6 +22,9 @@ type Bot struct {
 	commands map[string]*registeredCommand
 	hooks    []*registeredHook
 	db       *bolt.DB
+	ctx      context.Context
+	cancel   context.CancelFunc
+	wg       sync.WaitGroup
 }
 
 func (b *Bot) GetUserId() string {
@@ -95,19 +102,25 @@ func (b *Bot) Start() {
 }
 
 func (b *Bot) Stop() {
+	b.cancel()
+	b.wg.Wait()
 	if b.db != nil {
 		b.db.Close()
 	}
 	b.rtm.Disconnect()
 }
 
-func NewBot(apiKey string, dbPath string) (*Bot, error) {
+func NewBot(parentCtx context.Context, apiKey string, dbPath string) (*Bot, error) {
+	ctx, cancel := context.WithCancel(parentCtx)
+
 	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, err
 	}
 
 	return &Bot{
+		ctx:      ctx,
+		cancel:   cancel,
 		apiKey:   apiKey,
 		api:      slack.New(apiKey),
 		channels: make(map[string]slack.Channel, 10),

@@ -1,18 +1,35 @@
 package echo
 
 import (
+	"context"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/jirwin/quadlek/quadlek"
-	"github.com/nlopes/slack"
 )
 
-type EchoCommand struct{}
+type EchoCommand struct {
+	channel chan *quadlek.CommandMsg
+}
 
 func (ec *EchoCommand) GetName() string {
 	return "echo"
 }
 
-func (ec *EchoCommand) RunCommand(bot *quadlek.Bot, msg *slack.Msg, parsedMsg string, store *quadlek.Store) {
-	bot.Respond(msg, parsedMsg)
+func (ec *EchoCommand) Channel() chan<- *quadlek.CommandMsg {
+	return ec.channel
+}
+
+func (ec *EchoCommand) Run(ctx context.Context) {
+	for {
+		select {
+		case cmdMsg := <-ec.channel:
+			cmdMsg.Bot.Respond(cmdMsg.Msg, cmdMsg.ParsedMsg)
+
+		case <-ctx.Done():
+			log.Info("Exiting echo command")
+			return
+		}
+	}
 }
 
 type Plugin struct {
@@ -33,6 +50,8 @@ func (p *Plugin) GetId() string {
 
 func Register() quadlek.Plugin {
 	return &Plugin{
-		Commands: []quadlek.Command{&EchoCommand{}},
+		Commands: []quadlek.Command{&EchoCommand{
+			channel: make(chan *quadlek.CommandMsg),
+		}},
 	}
 }
