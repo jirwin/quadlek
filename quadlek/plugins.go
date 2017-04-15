@@ -28,9 +28,30 @@ type registeredCommand struct {
 	Command  Command
 }
 
-type Hook interface {
-	Channel() chan<- *HookMsg
-	Run(ctx context.Context)
+type command struct {
+	name    string
+	channel chan *CommandMsg
+	runFunc func(ctx context.Context, cmdChan <-chan *CommandMsg)
+}
+
+func (c *command) GetName() string {
+	return c.name
+}
+
+func (c *command) Channel() chan<- *CommandMsg {
+	return c.channel
+}
+
+func (c *command) Run(ctx context.Context) {
+	c.runFunc(ctx, c.channel)
+}
+
+func MakeCommand(name string, runFn func(ctx context.Context, cmdChan <-chan *CommandMsg)) Command {
+	return &command{
+		name:    name,
+		runFunc: runFn,
+		channel: make(chan *CommandMsg),
+	}
 }
 
 type CommandMsg struct {
@@ -46,6 +67,11 @@ type CommandResp struct {
 	InChannel    bool               `json:"-"`
 }
 
+type Hook interface {
+	Channel() chan<- *HookMsg
+	Run(ctx context.Context)
+}
+
 type HookMsg struct {
 	Bot   *Bot
 	Msg   *slack.Msg
@@ -57,11 +83,71 @@ type registeredHook struct {
 	Hook     Hook
 }
 
+type hook struct {
+	channel chan *HookMsg
+	runFunc func(ctx context.Context, hookChan <-chan *HookMsg)
+}
+
+func (h *hook) Channel() chan<- *HookMsg {
+	return h.channel
+}
+
+func (h *hook) Run(ctx context.Context) {
+	h.runFunc(ctx, h.channel)
+}
+
+func MakeHook(runFunc func(ctx context.Context, hookChan <-chan *HookMsg)) Hook {
+	return &hook{
+		channel: make(chan *HookMsg),
+		runFunc: runFunc,
+	}
+}
+
 type Plugin interface {
 	GetId() string
 	GetCommands() []Command
 	GetHooks() []Hook
 	Load(bot *Bot, store *Store) error
+}
+
+type loadPluginFn func(bot *Bot, store *Store) error
+
+type plugin struct {
+	id       string
+	commands []Command
+	hooks    []Hook
+	loadFn   loadPluginFn
+}
+
+func (p *plugin) GetId() string {
+	return p.id
+}
+
+func (p *plugin) GetCommands() []Command {
+	return p.commands
+}
+
+func (p *plugin) GetHooks() []Hook {
+	return p.hooks
+}
+
+func (p *plugin) Load(bot *Bot, store *Store) error {
+	return p.loadFn(bot, store)
+}
+
+func MakePlugin(id string, commands []Command, hooks []Hook, loadFunction loadPluginFn) Plugin {
+	if loadFunction == nil {
+		loadFunction = func(bot *Bot, store *Store) error {
+			return nil
+		}
+	}
+
+	return &plugin{
+		id:       id,
+		commands: commands,
+		hooks:    hooks,
+		loadFn:   loadFunction,
+	}
 }
 
 func (b *Bot) MsgToBot(msg string) bool {
@@ -186,7 +272,7 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respChan := make(chan *CommandResp)
-	cmd.ResponseChan = respChan
+	cmd.responseChan = respChan
 	b.cmdChannel <- cmd
 
 	timer := time.NewTimer(time.Millisecond * 2900)

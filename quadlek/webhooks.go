@@ -11,6 +11,8 @@ import (
 	"github.com/gorilla/schema"
 )
 
+var decoder = schema.NewDecoder()
+
 type slashCommand struct {
 	Token        string            `schema:"token"`
 	TeamId       string            `schema:"team_id"`
@@ -22,10 +24,12 @@ type slashCommand struct {
 	Command      string            `schema:"command"`
 	Text         string            `schema:"text"`
 	ResponseUrl  string            `schema:"response_url"`
-	ResponseChan chan *CommandResp `schema:"-"`
+	responseChan chan *CommandResp `schema:"-"`
 }
 
-var decoder = schema.NewDecoder()
+func (sc *slashCommand) Reply() chan<- *CommandResp {
+	return sc.responseChan
+}
 
 type slashCommandErrorResponse struct {
 	ResponseType string `json:"response_type"`
