@@ -55,7 +55,7 @@ func (s *Store) GetAndUpdate(key string, updateFunc func([]byte) ([]byte, error)
 	return nil
 }
 
-func (s *Store) Get(key string, getFunc func([]byte)) error {
+func (s *Store) Get(key string, getFunc func([]byte) error) error {
 	err := s.db.View(func(tx *bolt.Tx) error {
 		stringKey := []byte(key)
 		rootBkt := tx.Bucket([]byte("plugins"))
@@ -63,9 +63,7 @@ func (s *Store) Get(key string, getFunc func([]byte)) error {
 		pluginBkt := rootBkt.Bucket([]byte(s.pluginId))
 
 		val := pluginBkt.Get(stringKey)
-		getFunc(val)
-
-		return nil
+		return getFunc(val)
 	})
 	if err != nil {
 		return err

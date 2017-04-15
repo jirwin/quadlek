@@ -2,22 +2,56 @@ package quadlek
 
 import (
 	"context"
-	"io"
+	"encoding/json"
 	"net/http"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 )
 
+type slashCommand struct {
+	Token        string            `schema:"token"`
+	TeamId       string            `schema:"team_id"`
+	TeamDomain   string            `schema:"team_domain"`
+	ChannelId    string            `schema:"channel_id"`
+	ChannelName  string            `schema:"channel_name"`
+	UserId       string            `schema:"user_id"`
+	UserName     string            `schema:"user_name"`
+	Command      string            `schema:"command"`
+	Text         string            `schema:"text"`
+	ResponseUrl  string            `schema:"response_url"`
+	ResponseChan chan *CommandResp `schema:"-"`
+}
+
+var decoder = schema.NewDecoder()
+
+type slashCommandErrorResponse struct {
+	ResponseType string `json:"response_type"`
+	Text         string `json:"text"`
+}
+
+func jsonResponse(w http.ResponseWriter, obj interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(obj)
+}
+
+func generateErrorMsg(w http.ResponseWriter, msg string) {
+	resp := &slashCommandErrorResponse{
+		ResponseType: "ephemeral",
+		Text:         msg,
+	}
+
+	jsonResponse(w, resp)
+}
+
 func (b *Bot) WebhookServer() {
-	mux := http.NewServeMux()
+	r := mux.NewRouter()
+	r.HandleFunc("/slack/command", b.handleSlackCommand).Methods("POST")
 
-	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(5 * time.Second)
-		io.WriteString(w, "Finished!")
-	}))
-
-	srv := &http.Server{Addr: ":8000", Handler: mux}
+	srv := &http.Server{Addr: ":8000", Handler: r}
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {

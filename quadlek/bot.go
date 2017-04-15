@@ -13,26 +13,36 @@ import (
 )
 
 type Bot struct {
-	apiKey   string
-	api      *slack.Client
-	rtm      *slack.RTM
-	channels map[string]slack.Channel
-	username string
-	userId   string
-	commands map[string]*registeredCommand
-	hooks    []*registeredHook
-	db       *bolt.DB
-	ctx      context.Context
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
+	apiKey            string
+	verificationToken string
+	api               *slack.Client
+	rtm               *slack.RTM
+	channels          map[string]slack.Channel
+	username          string
+	userId            string
+	commands          map[string]*registeredCommand
+	cmdChannel        chan *slashCommand
+	hooks             []*registeredHook
+	db                *bolt.DB
+	ctx               context.Context
+	cancel            context.CancelFunc
+	wg                sync.WaitGroup
 }
 
 func (b *Bot) GetUserId() string {
 	return b.userId
 }
 
+func (b *Bot) GetApi() *slack.Client {
+	return b.api
+}
+
 func (b *Bot) Respond(msg *slack.Msg, resp string) {
 	b.rtm.SendMessage(b.rtm.NewOutgoingMessage(fmt.Sprintf("<@%s>: %s", msg.User, resp), msg.Channel))
+}
+
+func (b *Bot) PostMessage(channel, resp string, params slack.PostMessageParameters) (string, string, error) {
+	return b.rtm.PostMessage(channel, resp, params)
 }
 
 func (b *Bot) Say(channel string, resp string) {
@@ -46,6 +56,9 @@ func (b *Bot) React(msg *slack.Msg, reaction string) {
 func (b *Bot) HandleEvents() {
 	for {
 		select {
+		case slashCmd := <-b.cmdChannel:
+			b.dispatchCommand(slashCmd)
+
 		case msg := <-b.rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
 			case *slack.HelloEvent:
@@ -53,13 +66,6 @@ func (b *Bot) HandleEvents() {
 			case *slack.ConnectedEvent:
 				b.username = ev.Info.User.Name
 				b.userId = ev.Info.User.ID
-				for _, channel := range ev.Info.Channels {
-					if channel.IsMember {
-						b.channels[channel.ID] = channel
-						b.Say(channel.ID, "I'm alive!")
-
-					}
-				}
 
 			case *slack.ChannelJoinedEvent:
 				b.channels[ev.Channel.ID] = ev.Channel
@@ -69,18 +75,12 @@ func (b *Bot) HandleEvents() {
 				delete(b.channels, ev.Channel)
 
 			case *slack.MessageEvent:
-				if b.MsgToBot(ev.Msg.Text) {
-					b.DispatchCommand(&ev.Msg)
-				}
 				if ev.Msg.User != b.userId {
-					b.DispatchHooks(&ev.Msg)
+					b.dispatchHooks(&ev.Msg)
 				}
 
 			case *slack.PresenceChangeEvent:
 				fmt.Printf("Presence Change: %v\n", ev)
-
-			case *slack.LatencyReport:
-				fmt.Printf("Current latency: %v\n", ev.Value)
 
 			case *slack.RTMError:
 				fmt.Printf("Error: %s\n", ev.Error())
@@ -88,8 +88,6 @@ func (b *Bot) HandleEvents() {
 			case *slack.InvalidAuthEvent:
 				fmt.Printf("Invalid credentials")
 
-			default:
-				fmt.Printf("Unexpected: %v\n", msg.Data)
 			}
 		}
 	}
@@ -111,7 +109,7 @@ func (b *Bot) Stop() {
 	b.rtm.Disconnect()
 }
 
-func NewBot(parentCtx context.Context, apiKey string, dbPath string) (*Bot, error) {
+func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string) (*Bot, error) {
 	ctx, cancel := context.WithCancel(parentCtx)
 
 	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
@@ -120,13 +118,15 @@ func NewBot(parentCtx context.Context, apiKey string, dbPath string) (*Bot, erro
 	}
 
 	return &Bot{
-		ctx:      ctx,
-		cancel:   cancel,
-		apiKey:   apiKey,
-		api:      slack.New(apiKey),
-		channels: make(map[string]slack.Channel, 10),
-		commands: make(map[string]*registeredCommand),
-		hooks:    []*registeredHook{},
-		db:       db,
+		ctx:               ctx,
+		cancel:            cancel,
+		apiKey:            apiKey,
+		verificationToken: verificationToken,
+		api:               slack.New(apiKey),
+		channels:          make(map[string]slack.Channel, 10),
+		commands:          make(map[string]*registeredCommand),
+		cmdChannel:        make(chan *slashCommand),
+		hooks:             []*registeredHook{},
+		db:                db,
 	}, nil
 }

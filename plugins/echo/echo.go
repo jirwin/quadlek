@@ -23,7 +23,7 @@ func (ec *EchoCommand) Run(ctx context.Context) {
 	for {
 		select {
 		case cmdMsg := <-ec.channel:
-			cmdMsg.Bot.Respond(cmdMsg.Msg, cmdMsg.ParsedMsg)
+			cmdMsg.Bot.Respond(cmdMsg.Msg, cmdMsg.Text)
 
 		case <-ctx.Done():
 			log.Info("Exiting echo command")
@@ -46,6 +46,10 @@ func (p *Plugin) GetHooks() []quadlek.Hook {
 
 func (p *Plugin) GetId() string {
 	return "286647df-8085-48ae-936e-2190783199db"
+}
+
+func (p *Plugin) Load(bot *quadlek.Bot, store *quadlek.Store) error {
+	return nil
 }
 
 func Register() quadlek.Plugin {

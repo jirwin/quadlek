@@ -28,28 +28,27 @@ func (kh *KarmaScoreCommand) Run(ctx context.Context) {
 	for {
 		select {
 		case cmdMsg := <-kh.channel:
-			tokens := strings.Split(cmdMsg.ParsedMsg, " ")
-			if len(tokens) != 1 {
-				cmdMsg.Bot.Respond(cmdMsg.Msg, fmt.Sprintf("Invalid syntax. Example: %s score jirwin", cmdMsg.Bot.GetUserId()))
-			}
-
-			item := tokens[0]
-
-			err := cmdMsg.Store.Get(item, func(val []byte) {
-				var score string
-
-				score = string(val)
+			err := cmdMsg.Store.Get(cmdMsg.Command.Text, func(val []byte) error {
+				score := string(val)
 				if val == nil {
 					score = "0"
 				}
-				cmdMsg.Bot.Say(cmdMsg.Msg.Channel, fmt.Sprintf("%s: %s", item, score))
+
+				cmdMsg.Command.ResponseChan <- &quadlek.CommandResp{
+					Text:      fmt.Sprintf("Score for %s is %s", cmdMsg.Command.Text, score),
+					InChannel: true,
+				}
+
+				return nil
 			})
 			if err != nil {
 				log.WithFields(log.Fields{
 					"err":  err,
-					"item": item,
+					"text": cmdMsg.Command.Text,
 				}).Error("unable to get score")
-				cmdMsg.Bot.Respond(cmdMsg.Msg, fmt.Sprintf("Unable to get score for %s.", item))
+				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+					Text: fmt.Sprintf("Unable to fetch score for %s", cmdMsg.Command.Text),
+				})
 			}
 
 		case <-ctx.Done():
@@ -164,6 +163,10 @@ func (p *Plugin) GetHooks() []quadlek.Hook {
 
 func (p *Plugin) GetId() string {
 	return "e0aee0d4-2b01-4549-a99b-02b0c8ba791f"
+}
+
+func (p *Plugin) Load(bot *quadlek.Bot, store *quadlek.Store) error {
+	return nil
 }
 
 func Register() quadlek.Plugin {
