@@ -10,6 +10,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/nlopes/slack"
+	"math/rand"
 )
 
 type Bot struct {
@@ -110,6 +111,9 @@ func (b *Bot) Stop() {
 }
 
 func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string) (*Bot, error) {
+	// Seed the RNG with the current time globally
+	rand.Seed(time.Now().UnixNano())
+
 	ctx, cancel := context.WithCancel(parentCtx)
 
 	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: 1 * time.Second})

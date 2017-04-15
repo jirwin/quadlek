@@ -23,7 +23,7 @@ func echoCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 
 func Register() quadlek.Plugin {
 	return quadlek.MakePlugin(
-		"286647df-8085-48ae-936e-2190783199db",
+		"echo",
 		[]quadlek.Command{quadlek.MakeCommand("echo", echoCommand)},
 		nil,
 		nil,

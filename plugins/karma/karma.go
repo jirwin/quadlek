@@ -118,7 +118,7 @@ func karmaHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
 
 func Register() quadlek.Plugin {
 	return quadlek.MakePlugin(
-		"e0aee0d4-2b01-4549-a99b-02b0c8ba791f",
+		"karma",
 		[]quadlek.Command{
 			quadlek.MakeCommand("score", scoreCommand),
 		},
