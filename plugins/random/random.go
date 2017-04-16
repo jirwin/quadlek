@@ -2,11 +2,10 @@ package random
 
 import (
 	"context"
-	"strings"
-
 	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
 
 	"github.com/jirwin/quadlek/quadlek"
 )
@@ -30,7 +29,7 @@ func rollCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			}
 
 			cmdMsg.Command.Reply() <- &quadlek.CommandResp{
-				Text:      strconv.FormatInt(rand.Int63n(max+1), 10),
+				Text:      fmt.Sprintf("You rolled a %s!", strconv.FormatInt(rand.Int63n(max+1), 10)),
 				InChannel: true,
 			}
 
@@ -56,6 +55,14 @@ func chooseCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 
 			for i, choice := range choices {
 				choices[i] = strings.TrimSpace(choice)
+			}
+
+			if len(choices) == 1 {
+				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+					Text:      fmt.Sprintf("Well I guess I *have* to choose %s.", choices[0]),
+					InChannel: true,
+				}
+				continue
 			}
 
 			cmdMsg.Command.Reply() <- &quadlek.CommandResp{

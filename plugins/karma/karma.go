@@ -16,6 +16,12 @@ func scoreCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	for {
 		select {
 		case cmdMsg := <-cmdChannel:
+			if cmdMsg.Command.Text == "" {
+				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+					Text: "I need a name to look up the score for.",
+				}
+				continue
+			}
 			err := cmdMsg.Store.Get(cmdMsg.Command.Text, func(val []byte) error {
 				score := string(val)
 				if val == nil {

@@ -51,6 +51,64 @@ func generateErrorMsg(w http.ResponseWriter, msg string) {
 	jsonResponse(w, resp)
 }
 
+func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("error parsing form. Invalid slack command hook.")
+		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
+		return
+	}
+
+	cmd := &slashCommand{}
+	err = decoder.Decode(cmd, r.PostForm)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("error marshalling slack command.")
+		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
+		return
+	}
+
+	if cmd.Token != b.verificationToken {
+		log.Error("Invalid validation token was used. Ignoring.")
+		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
+		return
+	}
+
+	respChan := make(chan *CommandResp)
+	cmd.responseChan = respChan
+	b.cmdChannel <- cmd
+
+	timer := time.NewTimer(time.Millisecond * 2500)
+	for {
+		select {
+		case resp := <-respChan:
+			if timer.Stop() {
+				// Got a nil response, so the plugin is explicitly not sending a response here and will send one manually.
+				if resp == nil {
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte{})
+					return
+				}
+
+				prepareSlashCommandResp(resp)
+				jsonResponse(w, resp)
+			} else {
+				<-timer.C
+				b.RespondToSlashCommand(cmd.ResponseUrl, resp)
+			}
+			return
+
+		case <-timer.C:
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte{})
+			return
+		}
+	}
+}
+
 func (b *Bot) WebhookServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/slack/command", b.handleSlackCommand).Methods("POST")

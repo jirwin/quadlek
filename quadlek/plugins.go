@@ -11,8 +11,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"time"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/nlopes/slack"
 )
@@ -194,12 +192,12 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 			PluginId: plugin.GetId(),
 			Command:  command,
 		}
-		go func() {
+		go func(c Command) {
 			b.wg.Add(1)
 			defer b.wg.Done()
 
-			command.Run(b.ctx)
-		}()
+			c.Run(b.ctx)
+		}(command)
 	}
 
 	for _, hook := range plugin.GetHooks() {
@@ -207,12 +205,12 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 			PluginId: plugin.GetId(),
 			Hook:     hook,
 		})
-		go func() {
+		go func(h Hook) {
 			b.wg.Add(1)
 			defer b.wg.Done()
 
-			hook.Run(b.ctx)
-		}()
+			h.Run(b.ctx)
+		}(hook)
 	}
 
 	return nil
@@ -223,6 +221,7 @@ func (b *Bot) dispatchCommand(slashCmd *slashCommand) {
 		return
 	}
 	cmdName := slashCmd.Command[1:]
+
 	cmd := b.GetCommand(cmdName)
 	if cmd == nil {
 		return
@@ -241,57 +240,6 @@ func (b *Bot) dispatchHooks(msg *slack.Msg) {
 			Bot:   b,
 			Msg:   msg,
 			Store: b.getStore(hook.PluginId),
-		}
-	}
-}
-
-func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("error parsing form. Invalid slack command hook.")
-		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
-		return
-	}
-
-	cmd := &slashCommand{}
-	err = decoder.Decode(cmd, r.PostForm)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("error marshalling slack command.")
-		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
-		return
-	}
-
-	if cmd.Token != b.verificationToken {
-		log.Error("Invalid validation token was used. Ignoring.")
-		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
-		return
-	}
-
-	respChan := make(chan *CommandResp)
-	cmd.responseChan = respChan
-	b.cmdChannel <- cmd
-
-	timer := time.NewTimer(time.Millisecond * 2900)
-	for {
-		select {
-		case resp := <-respChan:
-			if timer.Stop() {
-				prepareSlashCommandResp(resp)
-				jsonResponse(w, resp)
-			} else {
-				b.RespondToSlashCommand(cmd.ResponseUrl, resp)
-			}
-			return
-
-		case <-timer.C:
-			log.Info("Didn't get a response soon enough. Moving on.")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte{})
-			return
 		}
 	}
 }
