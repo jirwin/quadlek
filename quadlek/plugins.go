@@ -101,10 +101,54 @@ func MakeHook(runFunc func(ctx context.Context, hookChan <-chan *HookMsg)) Hook 
 	}
 }
 
+type Webhook interface {
+	GetName() string
+	Channel() chan<- *WebhookMsg
+	Run(ctx context.Context)
+}
+
+type WebhookMsg struct {
+	Bot     *Bot
+	Request *http.Request
+	Store   *Store
+}
+
+type registeredWebhook struct {
+	PluginId string
+	Webhook  Webhook
+}
+
+type webhook struct {
+	name    string
+	channel chan *WebhookMsg
+	runFunc func(ctx context.Context, webhookChan <-chan *WebhookMsg)
+}
+
+func (wh *webhook) GetName() string {
+	return wh.name
+}
+
+func (wh *webhook) Channel() chan<- *WebhookMsg {
+	return wh.channel
+}
+
+func (wh *webhook) Run(ctx context.Context) {
+	wh.runFunc(ctx, wh.channel)
+}
+
+func MakeWebhook(name string, runFunc func(ctx context.Context, whChan <-chan *WebhookMsg)) Webhook {
+	return &webhook{
+		name: name,
+		runFunc: runFunc,
+		channel: make(chan *WebhookMsg),
+	}
+}
+
 type Plugin interface {
 	GetId() string
 	GetCommands() []Command
 	GetHooks() []Hook
+	GetWebhooks() []Webhook
 	Load(bot *Bot, store *Store) error
 }
 
@@ -114,6 +158,7 @@ type plugin struct {
 	id       string
 	commands []Command
 	hooks    []Hook
+	webhooks []Webhook
 	loadFn   loadPluginFn
 }
 
@@ -129,11 +174,15 @@ func (p *plugin) GetHooks() []Hook {
 	return p.hooks
 }
 
+func (p *plugin) GetWebhooks() []Webhook {
+	return p.webhooks
+}
+
 func (p *plugin) Load(bot *Bot, store *Store) error {
 	return p.loadFn(bot, store)
 }
 
-func MakePlugin(id string, commands []Command, hooks []Hook, loadFunction loadPluginFn) Plugin {
+func MakePlugin(id string, commands []Command, hooks []Hook, webhooks []Webhook, loadFunction loadPluginFn) Plugin {
 	if loadFunction == nil {
 		loadFunction = func(bot *Bot, store *Store) error {
 			return nil
@@ -144,6 +193,7 @@ func MakePlugin(id string, commands []Command, hooks []Hook, loadFunction loadPl
 		id:       id,
 		commands: commands,
 		hooks:    hooks,
+		webhooks: webhooks,
 		loadFn:   loadFunction,
 	}
 }
@@ -159,6 +209,18 @@ func (b *Bot) GetCommand(cmdText string) *registeredCommand {
 
 	if cmd, ok := b.commands[cmdText]; ok {
 		return cmd
+	}
+
+	return nil
+}
+
+func (b *Bot) GetWebhook(name string) *registeredWebhook {
+	if name == "" {
+		return nil
+	}
+
+	if wh, ok := b.webhooks[name]; ok {
+		return wh
 	}
 
 	return nil
@@ -213,6 +275,23 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 		}(hook)
 	}
 
+	for _, webhook := range plugin.GetWebhooks() {
+		_, ok := b.webhooks[webhook.GetName()]
+		if ok {
+			return errors.new(fmt.Sprintf("Webhook already exists: %s", webhook.GetName()))
+		}
+		b.webhooks[webhook.GetName()] = &registeredWebhook{
+			PluginId: plugin.GetId(),
+			Webhook:  webhook,
+		}
+		go func(wh Webhook) {
+			b.wg.Add(1)
+			defer b.wg.Done()
+
+			wh.Run(b.ctx)
+		}(webhook)
+	}
+
 	return nil
 }
 
@@ -231,6 +310,19 @@ func (b *Bot) dispatchCommand(slashCmd *slashCommand) {
 		Bot:     b,
 		Command: slashCmd,
 		Store:   b.getStore(cmd.PluginId),
+	}
+}
+
+func (b *Bot) dispatchWebhook(webhook *PluginWebhook) {
+	wh :=  b.GetWebhook(webhook.Name)
+	if wh == nil {
+		return
+	}
+
+	wh.Webhook.Channel() <- &WebhookMsg{
+		Bot: b,
+		Request: webhook.Request,
+		Store: b.getStore(wh.PluginId),
 	}
 }
 

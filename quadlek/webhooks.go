@@ -13,6 +13,11 @@ import (
 
 var decoder = schema.NewDecoder()
 
+type PluginWebhook struct {
+	Name    string
+	Request *http.Request
+}
+
 type slashCommand struct {
 	Token        string            `schema:"token"`
 	TeamId       string            `schema:"team_id"`
@@ -109,9 +114,20 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	b.pluginWebhookChannel <- &PluginWebhook{
+		Name:    vars["webhook-name"],
+		Request: r,
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte{})
+}
+
 func (b *Bot) WebhookServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/slack/command", b.handleSlackCommand).Methods("POST")
+	r.HandleFunc("/plugin/{webhook-name}", b.handlePluginWebhook).Methods("GET")
 
 	srv := &http.Server{Addr: ":8000", Handler: r}
 

@@ -85,5 +85,6 @@ func Register() quadlek.Plugin {
 		},
 		nil,
 		nil,
+		nil,
 	)
 }
