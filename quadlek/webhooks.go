@@ -7,11 +7,19 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 )
 
+const WebhookRoot = "https://quadlek.jirw.in/slack/plugin"
+
 var decoder = schema.NewDecoder()
+
+type PluginWebhook struct {
+	Name    string
+	Request *http.Request
+}
 
 type slashCommand struct {
 	Token        string            `schema:"token"`
@@ -109,9 +117,22 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	b.pluginWebhookChannel <- &PluginWebhook{
+		Name:    vars["webhook-name"],
+		Request: r,
+	}
+
+	spew.Dump("%s", vars)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte{})
+}
+
 func (b *Bot) WebhookServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/slack/command", b.handleSlackCommand).Methods("POST")
+	r.HandleFunc("/slack/plugin/{webhook-name}", b.handlePluginWebhook).Methods("GET")
 
 	srv := &http.Server{Addr: ":8000", Handler: r}
 

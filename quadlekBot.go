@@ -12,6 +12,7 @@ import (
 	"github.com/jirwin/quadlek/plugins/random"
 	"github.com/jirwin/quadlek/quadlek"
 	"github.com/urfave/cli"
+	"github.com/jirwin/quadlek/plugins/spotify"
 )
 
 const Version = "0.0.1"
@@ -56,6 +57,12 @@ func run(c *cli.Context) error {
 	}
 
 	err = bot.RegisterPlugin(random.Register())
+	if err != nil {
+		fmt.Printf("error registering random plugin: %s", err.Error())
+		return nil
+	}
+
+	err = bot.RegisterPlugin(spotify.Register())
 	if err != nil {
 		fmt.Printf("error registering random plugin: %s", err.Error())
 		return nil

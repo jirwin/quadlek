@@ -132,5 +132,6 @@ func Register() quadlek.Plugin {
 			quadlek.MakeHook(karmaHook),
 		},
 		nil,
+		nil,
 	)
 }

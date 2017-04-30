@@ -27,6 +27,26 @@ func (s *Store) Update(key string, value []byte) error {
 	return nil
 }
 
+func (s *Store) UpdateRaw(updateFunc func(*bolt.Bucket) error) error {
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		rootBkt := tx.Bucket([]byte("plugins"))
+
+		pluginBkt := rootBkt.Bucket([]byte(s.pluginId))
+
+		err := updateFunc(pluginBkt)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Store) GetAndUpdate(key string, updateFunc func([]byte) ([]byte, error)) error {
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		stringKey := []byte(key)

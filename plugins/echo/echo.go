@@ -27,5 +27,6 @@ func Register() quadlek.Plugin {
 		[]quadlek.Command{quadlek.MakeCommand("echo", echoCommand)},
 		nil,
 		nil,
+		nil,
 	)
 }

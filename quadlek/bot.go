@@ -8,26 +8,29 @@ import (
 
 	"sync"
 
+	"math/rand"
+
 	"github.com/boltdb/bolt"
 	"github.com/nlopes/slack"
-	"math/rand"
 )
 
 type Bot struct {
-	apiKey            string
-	verificationToken string
-	api               *slack.Client
-	rtm               *slack.RTM
-	channels          map[string]slack.Channel
-	username          string
-	userId            string
-	commands          map[string]*registeredCommand
-	cmdChannel        chan *slashCommand
-	hooks             []*registeredHook
-	db                *bolt.DB
-	ctx               context.Context
-	cancel            context.CancelFunc
-	wg                sync.WaitGroup
+	apiKey               string
+	verificationToken    string
+	api                  *slack.Client
+	rtm                  *slack.RTM
+	channels             map[string]slack.Channel
+	username             string
+	userId               string
+	commands             map[string]*registeredCommand
+	cmdChannel           chan *slashCommand
+	webhooks             map[string]*registeredWebhook
+	pluginWebhookChannel chan *PluginWebhook
+	hooks                []*registeredHook
+	db                   *bolt.DB
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	wg                   sync.WaitGroup
 }
 
 func (b *Bot) GetUserId() string {
@@ -59,6 +62,9 @@ func (b *Bot) HandleEvents() {
 		select {
 		case slashCmd := <-b.cmdChannel:
 			b.dispatchCommand(slashCmd)
+
+		case webhook := <-b.pluginWebhookChannel:
+			b.dispatchWebhook(webhook)
 
 		case msg := <-b.rtm.IncomingEvents:
 			switch ev := msg.Data.(type) {
@@ -122,15 +128,17 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 	}
 
 	return &Bot{
-		ctx:               ctx,
-		cancel:            cancel,
-		apiKey:            apiKey,
-		verificationToken: verificationToken,
-		api:               slack.New(apiKey),
-		channels:          make(map[string]slack.Channel, 10),
-		commands:          make(map[string]*registeredCommand),
-		cmdChannel:        make(chan *slashCommand),
-		hooks:             []*registeredHook{},
-		db:                db,
+		ctx:                  ctx,
+		cancel:               cancel,
+		apiKey:               apiKey,
+		verificationToken:    verificationToken,
+		api:                  slack.New(apiKey),
+		channels:             make(map[string]slack.Channel, 10),
+		commands:             make(map[string]*registeredCommand),
+		cmdChannel:           make(chan *slashCommand),
+		webhooks:             make(map[string]*registeredWebhook),
+		pluginWebhookChannel: make(chan *PluginWebhook),
+		hooks:                []*registeredHook{},
+		db:                   db,
 	}, nil
 }
