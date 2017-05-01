@@ -27,6 +27,10 @@ func (s *Store) Update(key string, value []byte) error {
 	return nil
 }
 
+func (s *Store) UpdateRaw(updateFunc func() error) error {
+
+}
+
 func (s *Store) GetAndUpdate(key string, updateFunc func([]byte) ([]byte, error)) error {
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		stringKey := []byte(key)

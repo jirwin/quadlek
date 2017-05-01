@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package spotify;
+
+message AuthState {
+    string id = 1;
+    string user_id = 2;
+    string response_url = 3;
+    int64 expire_time = 4;
+}
+
+message AuthToken {
+    string token = 1;
+}

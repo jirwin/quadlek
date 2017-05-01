@@ -1,3 +1,5 @@
+//go:generate protoc --go_out=. spotify.proto
+
 package spotify
 
 import (
@@ -8,12 +10,15 @@ import (
 	"github.com/jirwin/quadlek/quadlek"
 	uuid "github.com/satori/go.uuid"
 	"github.com/zmb3/spotify"
+	"time"
+	"github.com/golang/protobuf/proto"
+	"github.com/gorilla/mux"
 )
 
-func startAuthFlow() string {
+func startAuthFlow(stateId string) string {
 	auth := spotify.NewAuthenticator(fmt.Sprintf("%s/%s", quadlek.WebhookRoot, "spotifyAuthorize"), spotify.ScopePlaylistModifyPublic, spotify.ScopePlaylistModifyPrivate, spotify.ScopeUserReadCurrentlyPlaying)
 
-	url := auth.AuthURL(uuid.NewV4().String())
+	url := auth.AuthURL(stateId)
 
 	return url
 }
@@ -22,18 +27,42 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	for {
 		select {
 		case cmdMsg := <-cmdChannel:
-			err := cmdMsg.Store.Get("authorization-"+cmdMsg.Command.UserId, func(val []byte) error {
-				authToken := string(val)
-				if authToken == "" {
-					authUrl := startAuthFlow()
+			err := cmdMsg.Store.GetAndUpdate("authorization-"+cmdMsg.Command.UserId, func(val []byte) ([]byte, error) {
+				authState := &AuthState{}
+				err := proto.Unmarshal(val, authState)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"err": err,
+					}).Error("error unmarshalling auth state")
+					return nil, err
+				}
+
+				if authState.Token == "" {
+					stateId := uuid.NewV4().String()
+					authUrl := startAuthFlow(stateId)
+
+					authState := &AuthState{
+						Id: stateId,
+						UserId: cmdMsg.Command.UserId,
+						ResponseUrl: cmdMsg.Command.ResponseUrl,
+						ExpireTime: time.Now().UnixNano() + int64(time.Minute * 15),
+					}
+
+					authStateBytes, err := proto.Marshal(authState)
+					if err != nil {
+						log.WithFields(log.Fields{
+							"err": err,
+						}).Error("error marshalling auth state")
+						return nil, err
+					}
 
 					cmdMsg.Command.Reply() <- &quadlek.CommandResp{
 						Text: fmt.Sprintf("You need to be authenticate to Spotify to continue. Please visit %s to do this.", authUrl),
 					}
-					return nil
+					return authStateBytes, nil
 				}
 
-				return nil
+				return nil, nil
 			})
 			if err != nil {
 				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
@@ -52,6 +81,15 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 	for {
 		select {
 		case whMsg := <-whChannel:
+			query := whMsg.Request.URL.Query()
+			stateId, ok := query["state"]
+			if !ok {
+				log.WithFields(log.Fields{
+					"url": whMsg.Request.URL.String(),
+				}).Error("invalid callback url")
+				continue
+			}
+
 			whMsg.Store.Update("authorization-"+)
 			whMsg.Request.Body.Close()
 
