@@ -278,7 +278,7 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 	for _, webhook := range plugin.GetWebhooks() {
 		_, ok := b.webhooks[webhook.GetName()]
 		if ok {
-			return errors.new(fmt.Sprintf("Webhook already exists: %s", webhook.GetName()))
+			return errors.New(fmt.Sprintf("Webhook already exists: %s", webhook.GetName()))
 		}
 		b.webhooks[webhook.GetName()] = &registeredWebhook{
 			PluginId: plugin.GetId(),

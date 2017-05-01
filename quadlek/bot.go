@@ -136,6 +136,7 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 		channels:             make(map[string]slack.Channel, 10),
 		commands:             make(map[string]*registeredCommand),
 		cmdChannel:           make(chan *slashCommand),
+		webhooks:             make(map[string]*registeredWebhook),
 		pluginWebhookChannel: make(chan *PluginWebhook),
 		hooks:                []*registeredHook{},
 		db:                   db,

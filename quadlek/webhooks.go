@@ -7,6 +7,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 )
@@ -120,6 +121,8 @@ func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 		Name:    vars["webhook-name"],
 		Request: r,
 	}
+
+	spew.Dump("%s", vars)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte{})
 }
@@ -127,7 +130,7 @@ func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 func (b *Bot) WebhookServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/slack/command", b.handleSlackCommand).Methods("POST")
-	r.HandleFunc("/plugin/{webhook-name}", b.handlePluginWebhook).Methods("GET")
+	r.HandleFunc("/slack/plugin/{webhook-name}", b.handlePluginWebhook).Methods("GET")
 
 	srv := &http.Server{Addr: ":8000", Handler: r}
 
