@@ -3,16 +3,15 @@ package spotify
 import (
 	"context"
 	"fmt"
-	"path"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/jirwin/quadlek/quadlek"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/zmb3/spotify"
 )
 
 func startAuthFlow() string {
-	auth := spotify.NewAuthenticator(fmt.Sprintf("%s", path.Join(quadlek.WebhookRoot, "spotifyAuthorize")), spotify.ScopePlaylistModifyPublic, spotify.ScopePlaylistModifyPrivate, spotify.ScopeUserReadCurrentlyPlaying)
+	auth := spotify.NewAuthenticator(fmt.Sprintf("%s/%s", quadlek.WebhookRoot, "spotifyAuthorize"), spotify.ScopePlaylistModifyPublic, spotify.ScopePlaylistModifyPrivate, spotify.ScopeUserReadCurrentlyPlaying)
 
 	url := auth.AuthURL(uuid.NewV4().String())
 
@@ -53,7 +52,7 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 	for {
 		select {
 		case whMsg := <-whChannel:
-
+			whMsg.Store.Update("authorization-"+)
 			whMsg.Request.Body.Close()
 
 		case <-ctx.Done():

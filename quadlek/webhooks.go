@@ -12,6 +12,8 @@ import (
 	"github.com/gorilla/schema"
 )
 
+const WebhookRoot = "https://quadlek.jirw.in/slack/plugin"
+
 var decoder = schema.NewDecoder()
 
 type PluginWebhook struct {
