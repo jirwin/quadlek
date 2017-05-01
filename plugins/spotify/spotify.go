@@ -9,6 +9,8 @@ import (
 
 	"time"
 
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
 	"github.com/davecgh/go-spew/spew"
@@ -52,10 +54,51 @@ func getSpotifyAuth() spotify.Authenticator {
 
 }
 
-func getSpotifyClient(userId string, authToken *AuthToken, store *quadlek.Store) spotify.Client {
+func getSpotifyClient(userId string, authToken *AuthToken) (spotify.Client, bool) {
 	auth := getSpotifyAuth()
 	var token = authToken.GetOauthToken()
-	return auth.NewClient(token)
+	client := auth.NewClient(token)
+
+	_, err := client.CurrentUser()
+	if err != nil {
+		if strings.Contains(err.Error(), "token revoked") {
+			return client, true
+		}
+	}
+	return client, false
+}
+
+func authFlow(cmdMsg *quadlek.CommandMsg, bkt *bolt.Bucket) error {
+	stateId := uuid.NewV4().String()
+	authUrl := startAuthFlow(stateId)
+
+	authState := &AuthState{
+		Id:          stateId,
+		UserId:      cmdMsg.Command.UserId,
+		ResponseUrl: cmdMsg.Command.ResponseUrl,
+		ExpireTime:  time.Now().UnixNano() + int64(time.Minute*15),
+	}
+
+	authStateBytes, err := proto.Marshal(authState)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("error marshalling auth state")
+		return err
+	}
+
+	err = bkt.Put([]byte("authstate-"+stateId), authStateBytes)
+	if err != nil {
+		cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+			Text: "There was an error authenticating to Spotify.",
+		}
+		return err
+	}
+
+	cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+		Text: fmt.Sprintf("You need to be authenticate to Spotify to continue. Please visit %s to do this.", authUrl),
+	}
+	return nil
 }
 
 func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
@@ -74,44 +117,28 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 				}
 
 				if authToken.Token == nil {
-					stateId := uuid.NewV4().String()
-					authUrl := startAuthFlow(stateId)
-
-					authState := &AuthState{
-						Id:          stateId,
-						UserId:      cmdMsg.Command.UserId,
-						ResponseUrl: cmdMsg.Command.ResponseUrl,
-						ExpireTime:  time.Now().UnixNano() + int64(time.Minute*15),
-					}
-
-					authStateBytes, err := proto.Marshal(authState)
+					err = authFlow(cmdMsg, bkt)
 					if err != nil {
 						log.WithFields(log.Fields{
 							"err": err,
-						}).Error("error marshalling auth state")
+						}).Error("error during auth flow")
 						return err
 					}
-
-					err = bkt.Put([]byte("authstate-"+stateId), authStateBytes)
-					if err != nil {
-						cmdMsg.Command.Reply() <- &quadlek.CommandResp{
-							Text: "There was an error authenticating to Spotify.",
-						}
-						return err
-					}
-
-					cmdMsg.Command.Reply() <- &quadlek.CommandResp{
-						Text: fmt.Sprintf("You need to be authenticate to Spotify to continue. Please visit %s to do this.", authUrl),
-					}
-					return nil
 				}
 
-				client := getSpotifyClient(cmdMsg.Command.UserId, authToken, cmdMsg.Store)
+				client, needsReauth := getSpotifyClient(cmdMsg.Command.UserId, authToken)
 				if err != nil {
 					cmdMsg.Command.Reply() <- &quadlek.CommandResp{
 						Text: "Unable to get currently playing.",
 					}
 					return err
+				}
+				if needsReauth {
+					err = authFlow(cmdMsg, bkt)
+					if err != nil {
+						return err
+					}
+					return nil
 				}
 
 				playing, err := client.PlayerCurrentlyPlaying()
@@ -156,8 +183,6 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 				}).Error("invalid callback url")
 				continue
 			}
-
-			spew.Dump(whMsg.Request.URL)
 
 			err := whMsg.Store.UpdateRaw(func(bkt *bolt.Bucket) error {
 				authStateBytes := bkt.Get([]byte("authstate-" + stateId[0]))
