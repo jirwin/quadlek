@@ -24,16 +24,38 @@ func (at *AuthToken) GetOauthToken() *oauth2.Token {
 		AccessToken:  at.Token.AccessToken,
 		TokenType:    at.Token.TokenType,
 		RefreshToken: at.Token.RefreshToken,
-		Expiry:       time.Unix(at.Token.ExpiresAt, 0),
+		Expiry:       time.Unix(at.Token.ExpiresAt/9000000000, 0), //FIXME I accidentally stored this as nanos
+	}
+}
+
+func (at *AuthToken) PopulateFromOauthToken(token *oauth2.Token) {
+	at.Token = &Token{
+		AccessToken:  token.AccessToken,
+		TokenType:    token.TokenType,
+		RefreshToken: token.RefreshToken,
+		ExpiresAt:    token.Expiry.UnixNano(),
 	}
 }
 
 func startAuthFlow(stateId string) string {
-	auth := spotify.NewAuthenticator(fmt.Sprintf("%s/%s", quadlek.WebhookRoot, "spotifyAuthorize"), spotify.ScopePlaylistModifyPublic, spotify.ScopePlaylistModifyPrivate, spotify.ScopeUserReadCurrentlyPlaying)
-
+	auth := getSpotifyAuth()
 	url := auth.AuthURL(stateId)
 
 	return url
+}
+
+func getSpotifyAuth() spotify.Authenticator {
+	return spotify.NewAuthenticator(fmt.Sprintf("%s/%s", quadlek.WebhookRoot, "spotifyAuthorize"),
+		spotify.ScopePlaylistModifyPublic,
+		spotify.ScopePlaylistModifyPrivate,
+		spotify.ScopeUserReadCurrentlyPlaying)
+
+}
+
+func getSpotifyClient(userId string, authToken *AuthToken, store *quadlek.Store) spotify.Client {
+	auth := getSpotifyAuth()
+	var token = authToken.GetOauthToken()
+	return auth.NewClient(token)
 }
 
 func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
@@ -84,8 +106,13 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 					return nil
 				}
 
-				auth := spotify.NewAuthenticator(fmt.Sprintf("%s/%s", quadlek.WebhookRoot, "spotifyAuthorize"), spotify.ScopePlaylistModifyPublic, spotify.ScopePlaylistModifyPrivate, spotify.ScopeUserReadCurrentlyPlaying)
-				client := auth.NewClient(authToken.GetOauthToken())
+				client := getSpotifyClient(cmdMsg.Command.UserId, authToken, cmdMsg.Store)
+				if err != nil {
+					cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+						Text: "Unable to get currently playing.",
+					}
+					return err
+				}
 
 				playing, err := client.PlayerCurrentlyPlaying()
 				if err != nil {
@@ -106,9 +133,7 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 				return nil
 			})
 			if err != nil {
-				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
-					Text: "Unable to run now playing.",
-				})
+				continue
 			}
 
 		case <-ctx.Done():
@@ -154,7 +179,7 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 					return errors.New("Received expired auth request")
 				}
 
-				auth := spotify.NewAuthenticator(fmt.Sprintf("%s/%s", quadlek.WebhookRoot, "spotifyAuthorize"))
+				auth := getSpotifyAuth()
 				token, err := auth.Token(stateId[0], whMsg.Request)
 				if err != nil {
 					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
@@ -163,14 +188,8 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 					return err
 				}
 
-				authToken := &AuthToken{
-					Token: &Token{
-						AccessToken:  token.AccessToken,
-						TokenType:    token.TokenType,
-						RefreshToken: token.RefreshToken,
-						ExpiresAt:    token.Expiry.UnixNano(),
-					},
-				}
+				authToken := &AuthToken{}
+				authToken.PopulateFromOauthToken(token)
 
 				spew.Dump(authToken.Token.ExpiresAt)
 
