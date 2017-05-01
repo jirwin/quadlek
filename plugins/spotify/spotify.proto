@@ -9,6 +9,13 @@ message AuthState {
     int64 expire_time = 4;
 }
 
+message Token {
+	string access_token = 1;
+	string token_type = 2;
+	string refresh_token = 3;
+	int64 expires_at = 4;
+}
+
 message AuthToken {
-    string token = 1;
+    Token token = 1;
 }
