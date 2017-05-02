@@ -1,12 +1,8 @@
 hash: 01b385757de2cad4bd7dbcd9e512a720a5ad2b86f8e50703202d2e82d1fc9cb2
-updated: 2017-04-30T20:41:19.178215394-07:00
+updated: 2017-05-02T07:44:30.849277862-07:00
 imports:
 - name: github.com/boltdb/bolt
   version: 583e8937c61f1af6513608ccc75c97b6abdf4ff9
-- name: github.com/davecgh/go-spew
-  version: 346938d642f2ec3594ed81d874461961cd0faa76
-  subpackages:
-  - spew
 - name: github.com/golang/protobuf
   version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
   subpackages:
@@ -14,13 +10,13 @@ imports:
 - name: github.com/gorilla/context
   version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
 - name: github.com/gorilla/mux
-  version: 599cba5e7b6137d46ddf58fb1765f5d928e69604
+  version: 4c1c3952b7d9d0a061a3fa7b36fd373ba0398ebc
 - name: github.com/gorilla/schema
   version: 1c72d033473165ade8a126ba64180d76a9212dcd
 - name: github.com/nlopes/slack
   version: 5bdec13b7f814e15f59a846bcbc2f64cd71f7888
 - name: github.com/satori/go.uuid
-  version: 5bf94b69c6b68ee1b541973bb8e1144db23a194b
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/Sirupsen/logrus
   version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
 - name: github.com/urfave/cli
@@ -28,7 +24,7 @@ imports:
 - name: github.com/zmb3/spotify
   version: 84bf5e353eaccd52f17bbbfdfd1accfc56361bb6
 - name: golang.org/x/net
-  version: 8566e9372a500d1344adb9fdfd943c4354ef4aa2
+  version: da118f7b8e5954f39d0d2130ab35d4bf0e3cb344
   subpackages:
   - context
   - websocket
@@ -37,7 +33,7 @@ imports:
   subpackages:
   - internal
 - name: golang.org/x/sys
-  version: b699b7032584f0953262cb2788a0ca19bb494703
+  version: 9f30dcbe5be197894515a338a9bda9253567ea8f
   subpackages:
   - unix
 - name: google.golang.org/appengine
