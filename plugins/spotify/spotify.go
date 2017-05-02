@@ -253,7 +253,9 @@ func Register() quadlek.Plugin {
 		[]quadlek.Command{
 			quadlek.MakeCommand("nowplaying", nowPlaying),
 		},
-		nil,
+		[]quadlek.Hook{
+			quadlek.MakeHook(saveSongsHook),
+		},
 		[]quadlek.Webhook{
 			quadlek.MakeWebhook("spotifyAuthorize", spotifyAuthorizeWebhook),
 		},
