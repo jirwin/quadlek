@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"time"
 
@@ -13,13 +14,17 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/quadlek/quadlek"
 	uuid "github.com/satori/go.uuid"
 	"github.com/zmb3/spotify"
 	"golang.org/x/oauth2"
 )
+
+var scopes = []string{
+	spotify.ScopePlaylistModifyPublic,
+	spotify.ScopeUserReadCurrentlyPlaying,
+}
 
 func (at *AuthToken) GetOauthToken() *oauth2.Token {
 	return &oauth2.Token{
@@ -47,17 +52,18 @@ func startAuthFlow(stateId string) string {
 }
 
 func getSpotifyAuth() spotify.Authenticator {
-	return spotify.NewAuthenticator(fmt.Sprintf("%s/%s", quadlek.WebhookRoot, "spotifyAuthorize"),
-		spotify.ScopePlaylistModifyPublic,
-		spotify.ScopePlaylistModifyPrivate,
-		spotify.ScopeUserReadCurrentlyPlaying)
-
+	return spotify.NewAuthenticator(fmt.Sprintf("%s/%s", quadlek.WebhookRoot, "spotifyAuthorize"), scopes...)
 }
 
-func getSpotifyClient(userId string, authToken *AuthToken) (spotify.Client, bool) {
+func getSpotifyClient(authToken *AuthToken) (spotify.Client, bool) {
+
 	auth := getSpotifyAuth()
 	var token = authToken.GetOauthToken()
 	client := auth.NewClient(token)
+
+	if !reflect.DeepEqual(authToken.Scopes, scopes) {
+		return client, true
+	}
 
 	_, err := client.CurrentUser()
 	if err != nil {
@@ -126,13 +132,7 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 					}
 				}
 
-				client, needsReauth := getSpotifyClient(cmdMsg.Command.UserId, authToken)
-				if err != nil {
-					cmdMsg.Command.Reply() <- &quadlek.CommandResp{
-						Text: "Unable to get currently playing.",
-					}
-					return err
-				}
+				client, needsReauth := getSpotifyClient(authToken)
 				if needsReauth {
 					err = authFlow(cmdMsg, bkt)
 					if err != nil {
@@ -215,8 +215,7 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 
 				authToken := &AuthToken{}
 				authToken.PopulateFromOauthToken(token)
-
-				spew.Dump(authToken.Token.ExpiresAt)
+				authToken.Scopes = scopes
 
 				tokenBytes, err := proto.Marshal(authToken)
 				err = bkt.Put([]byte("authtoken-"+authState.UserId), tokenBytes)

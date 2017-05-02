@@ -7,7 +7,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 )
@@ -124,7 +123,6 @@ func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 		Request: r,
 	}
 
-	spew.Dump("%s", vars)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte{})
 }

@@ -18,4 +18,5 @@ message Token {
 
 message AuthToken {
     Token token = 1;
+    repeated string scopes = 2;
 }
