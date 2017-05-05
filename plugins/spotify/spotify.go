@@ -130,6 +130,7 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 						}).Error("error during auth flow")
 						return err
 					}
+					return nil
 				}
 
 				client, needsReauth := getSpotifyClient(authToken)
