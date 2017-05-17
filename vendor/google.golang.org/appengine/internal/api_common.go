@@ -5,14 +5,11 @@
 package internal
 
 import (
-	"errors"
 	"os"
 
 	"github.com/golang/protobuf/proto"
 	netcontext "golang.org/x/net/context"
 )
-
-var errNotAppEngineContext = errors.New("not an App Engine context")
 
 type CallOverrideFunc func(ctx netcontext.Context, service, method string, in, out proto.Message) error
 
@@ -82,11 +79,7 @@ func Logf(ctx netcontext.Context, level int64, format string, args ...interface{
 		f(level, format, args...)
 		return
 	}
-	c := fromContext(ctx)
-	if c == nil {
-		panic(errNotAppEngineContext)
-	}
-	logf(c, level, format, args...)
+	logf(fromContext(ctx), level, format, args...)
 }
 
 // NamespacedContext wraps a Context to support namespaces.

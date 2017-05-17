@@ -97,7 +97,6 @@ func TestStructCodec(t *testing.T) {
 			"R": {path: []int{0}},
 			"S": {path: []int{1}, structCodec: pStructCodec},
 			"T": {path: []int{2}, structCodec: oStructCodec},
-			"O": {path: []int{3, 0}},
 		},
 		complete: true,
 	}
@@ -210,7 +209,6 @@ func TestStructCodec(t *testing.T) {
 					"B":   {path: []int{1}},
 					"CC":  {path: []int{2}, structCodec: oStructCodec},
 					"DDD": {path: []int{3}, structCodec: rStructCodec},
-					"O":   {path: []int{4, 0}},
 				},
 				complete: true,
 			},
@@ -226,10 +224,9 @@ func TestStructCodec(t *testing.T) {
 			}{},
 			&structCodec{
 				fields: map[string]fieldCodec{
-					"w":   {path: []int{1}},
-					"xx":  {path: []int{2}, structCodec: oStructCodec},
-					"y":   {path: []int{3}, structCodec: rStructCodec},
-					"z.O": {path: []int{4, 0}},
+					"w":  {path: []int{1}},
+					"xx": {path: []int{2}, structCodec: oStructCodec},
+					"y":  {path: []int{3}, structCodec: rStructCodec},
 				},
 				complete: true,
 			},
@@ -247,7 +244,6 @@ func TestStructCodec(t *testing.T) {
 				fields: map[string]fieldCodec{
 					"B": {path: []int{1}},
 					"D": {path: []int{3}, structCodec: uStructCodec},
-					"U": {path: []int{4, 0}},
 				},
 				complete: true,
 			},
