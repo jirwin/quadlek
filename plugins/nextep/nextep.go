@@ -2,17 +2,18 @@ package nextep
 
 import (
 	"context"
-	"github.com/jirwin/quadlek/quadlek"
-	"github.com/purdyk/tvdb"
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
-	"fmt"
-	"errors"
+
+	"github.com/jirwin/quadlek/quadlek"
+	"github.com/purdyk/tvdb"
 )
 
-var tvdbKey string;
+var tvdbKey string
 
-func getTVDBClient(authToken string) (*tvdb.Client) {
+func getTVDBClient(authToken string) *tvdb.Client {
 	auth := &tvdb.Auth{APIKey: authToken}
 
 	hClient := &http.Client{
@@ -117,7 +118,7 @@ func nextEpCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			}
 
 			cmdMsg.Command.Reply() <- &quadlek.CommandResp{
-				Text:      fmt.Sprintf("Next Episode\n\t%s\n\t%s at %s\n", ep.EpisodeName, ep.FirstAired, series.AirsTime),
+				Text:      fmt.Sprintf("%s - %s (http://www.imdb.com/title/%s) airs at %s %s\n", series.SeriesName, ep.EpisodeName, series.ImdbID, ep.FirstAired, series.AirsTime),
 				InChannel: true,
 			}
 
