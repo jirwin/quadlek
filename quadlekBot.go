@@ -13,6 +13,7 @@ import (
 	"github.com/jirwin/quadlek/quadlek"
 	"github.com/urfave/cli"
 	"github.com/jirwin/quadlek/plugins/spotify"
+	"github.com/jirwin/quadlek/plugins/nextep"
 )
 
 const Version = "0.0.1"
@@ -64,8 +65,18 @@ func run(c *cli.Context) error {
 
 	err = bot.RegisterPlugin(spotify.Register())
 	if err != nil {
-		fmt.Printf("error registering random plugin: %s", err.Error())
+		fmt.Printf("error registering spotify plugin: %s", err.Error())
 		return nil
+	}
+
+	if c.IsSet("tvdb-key") {
+		tvdbKey := c.String("tvdb-key")
+
+		err = bot.RegisterPlugin(nextep.Register(tvdbKey))
+		if err != nil {
+			fmt.Printf("error registering nextep plugin: %s", err.Error())
+			return nil
+		}
 	}
 
 	signals := make(chan os.Signal, 1)
@@ -100,6 +111,11 @@ func main() {
 			Usage:  "The path where the database is stored.",
 			Value:  "quadlek.db",
 			EnvVar: "QUADLEK_DB_PATH",
+		},
+		cli.StringFlag{
+			Name: "tvdb-key",
+			Usage: "The TVDB api key for the bot, used by the nextep command",
+			EnvVar: "QUADLEK_TVDB_TOKEN",
 		},
 	}
 
