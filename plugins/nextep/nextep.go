@@ -14,10 +14,16 @@ var tvdbKey string;
 
 func getTVDBClient(authToken string) (*tvdb.Client) {
 	auth := &tvdb.Auth{APIKey: authToken}
+
 	hClient := &http.Client{
 		Timeout: 60 * time.Second,
 	}
-	return tvdb.NewClient(hClient, auth)
+
+	tClient := tvdb.NewClient(hClient, auth)
+
+	tClient.Token.Login()
+
+	return tClient
 
 }
 
