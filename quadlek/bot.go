@@ -10,6 +10,8 @@ import (
 
 	"math/rand"
 
+	"errors"
+
 	"github.com/boltdb/bolt"
 	"github.com/nlopes/slack"
 )
@@ -20,6 +22,7 @@ type Bot struct {
 	api                  *slack.Client
 	rtm                  *slack.RTM
 	channels             map[string]slack.Channel
+	humanChannels        map[string]slack.Channel
 	username             string
 	userId               string
 	commands             map[string]*registeredCommand
@@ -39,6 +42,15 @@ func (b *Bot) GetUserId() string {
 
 func (b *Bot) GetApi() *slack.Client {
 	return b.api
+}
+
+func (b *Bot) GetChannelId(chanName string) (string, error) {
+	channel, ok := b.humanChannels[chanName]
+	if !ok {
+		return "", errors.New("Channel not found.")
+	}
+
+	return channel.ID, nil
 }
 
 func (b *Bot) Respond(msg *slack.Msg, resp string) {
@@ -105,6 +117,14 @@ func (b *Bot) Start() {
 	go b.rtm.ManageConnection()
 	go b.HandleEvents()
 	go b.WebhookServer()
+
+	channels, err := b.api.GetChannels(false)
+	if err != nil {
+		panic(err)
+	}
+	for _, c := range channels {
+		b.humanChannels[c.Name] = c
+	}
 }
 
 func (b *Bot) Stop() {
@@ -134,6 +154,7 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 		verificationToken:    verificationToken,
 		api:                  slack.New(apiKey),
 		channels:             make(map[string]slack.Channel, 10),
+		humanChannels:        make(map[string]slack.Channel),
 		commands:             make(map[string]*registeredCommand),
 		cmdChannel:           make(chan *slashCommand),
 		webhooks:             make(map[string]*registeredWebhook),

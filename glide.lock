@@ -1,10 +1,18 @@
 hash: 01b385757de2cad4bd7dbcd9e512a720a5ad2b86f8e50703202d2e82d1fc9cb2
-updated: 2017-05-16T22:41:33.984581354-07:00
+updated: 2017-05-19T00:08:28.554203056-07:00
 imports:
 - name: github.com/boltdb/bolt
   version: 583e8937c61f1af6513608ccc75c97b6abdf4ff9
+- name: github.com/cenkalti/backoff
+  version: 5d150e7eec023ce7a124856b37c68e54b4050ac7
+- name: github.com/dghubble/go-twitter
+  version: d7141a7cba567120d53d0a136fce068864b43f8c
+  subpackages:
+  - twitter
+- name: github.com/dghubble/oauth1
+  version: 7d51c10e15ca32917b32ce43f6e25840d6951db4
 - name: github.com/dghubble/sling
-  version: bbfb8293bd33a6baad33d718aacf66ef73a29f30
+  version: eb56e89ac5088bebb12eef3cb4b293300f43608b
 - name: github.com/golang/protobuf
   version: 18c9bb3261723cd5401db4d0c9fbc5c3b6c70fe8
   subpackages:
