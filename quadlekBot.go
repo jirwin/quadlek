@@ -85,18 +85,28 @@ func run(c *cli.Context) error {
 		c.String("twitter-consumer-secret"),
 		c.String("twitter-access-token"),
 		c.String("twitter-access-secret"),
+		// These must be twitter user ids, not names. https://tweeterid.com/ for easy conversion between the two.
 		map[string]string{
-			"25073877":           "politics",
-			"13658502":           "general",
-			"778682":             "general",
-			"746780308457009153": "general",
-			"26786244":           "general",
-			"770397982797602816": "general",
-			"2317524115":         "general",
-			"807095":             "politics",
-			"2467791":            "politics",
+			"25073877":           "politics", // @realDonaldTrump
+			"13658502":           "general",  // @bkero
+			"778682":             "general",  // @jirwin
+			"26786244":           "general",  // @schonstal
+			"770397982797602816": "general",  // @mosh_bot
+			"2317524115":         "general",  // @PHP_CEO
+			"16589206":           "politics", // @wikileaks
+			"2189503302":         "random",   // @nytminuscontext
+			"120252183":          "random",   // @fakescience
 		},
 	))
+
+	//err = bot.RegisterPlugin(cointip.Register(
+	//	c.String("coinbase-key"),
+	//	c.String("coinbase-secret"),
+	//	c.String("coinbase-account"),
+	//))
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt)
@@ -155,6 +165,21 @@ func main() {
 			Name:   "twitter-access-secret",
 			Usage:  "The access secret for the twitter api",
 			EnvVar: "QUADLEK_TWITTER_ACCESS_SECRET",
+		},
+		cli.StringFlag{
+			Name:   "coinbase-key",
+			Usage:  "The access key for the coinbase api",
+			EnvVar: "QUADLEK_COINBASE_KEY",
+		},
+		cli.StringFlag{
+			Name:   "coinbase-secret",
+			Usage:  "The access secret for the coinbase api",
+			EnvVar: "QUADLEK_COINBASE_SECRET",
+		},
+		cli.StringFlag{
+			Name:   "coinbase-account",
+			Usage:  "The bank account for the coinbase api",
+			EnvVar: "QUADLEK_COINBASE_BANK_ACCOUNT",
 		},
 	}
 
