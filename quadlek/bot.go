@@ -14,6 +14,8 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/nlopes/slack"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 type Bot struct {
@@ -25,11 +27,14 @@ type Bot struct {
 	humanChannels        map[string]slack.Channel
 	username             string
 	userId               string
+	humanUsers           map[string]slack.User
+	users                map[string]slack.User
 	commands             map[string]*registeredCommand
 	cmdChannel           chan *slashCommand
 	webhooks             map[string]*registeredWebhook
 	pluginWebhookChannel chan *PluginWebhook
 	hooks                []*registeredHook
+	reactionHooks        []*registeredReactionHook
 	db                   *bolt.DB
 	ctx                  context.Context
 	cancel               context.CancelFunc
@@ -51,6 +56,15 @@ func (b *Bot) GetChannelId(chanName string) (string, error) {
 	}
 
 	return channel.ID, nil
+}
+
+func (b *Bot) GetUserName(userId string) (string, error) {
+	user, ok := b.users[userId]
+	if !ok {
+		return "", errors.New("User not found.")
+	}
+
+	return user.Name, nil
 }
 
 func (b *Bot) Respond(msg *slack.Msg, resp string) {
@@ -98,6 +112,25 @@ func (b *Bot) HandleEvents() {
 					b.dispatchHooks(&ev.Msg)
 				}
 
+			case *slack.ChannelCreatedEvent:
+				if ev.Channel.IsChannel {
+					channel, err := b.api.GetChannelInfo(ev.Channel.ID)
+					if err != nil {
+						log.WithError(err).Error("Unable to add channel")
+						continue
+					}
+					b.humanChannels[channel.Name] = *channel
+				}
+
+			case *slack.UserChangeEvent:
+				b.users[ev.User.ID] = ev.User
+				b.humanUsers[ev.User.Name] = ev.User
+
+			case *slack.ReactionAddedEvent:
+				if ev.User != b.userId {
+					b.dispatchReactions(ev)
+				}
+
 			case *slack.PresenceChangeEvent:
 				fmt.Printf("Presence Change: %v\n", ev)
 
@@ -124,6 +157,16 @@ func (b *Bot) Start() {
 	}
 	for _, c := range channels {
 		b.humanChannels[c.Name] = c
+	}
+
+	users, err := b.api.GetUsers()
+	if err != nil {
+		panic(err)
+	}
+
+	for _, u := range users {
+		b.users[u.ID] = u
+		b.humanUsers[u.Name] = u
 	}
 }
 
@@ -155,10 +198,13 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 		api:                  slack.New(apiKey),
 		channels:             make(map[string]slack.Channel, 10),
 		humanChannels:        make(map[string]slack.Channel),
+		humanUsers:           make(map[string]slack.User),
+		users:                make(map[string]slack.User),
 		commands:             make(map[string]*registeredCommand),
 		cmdChannel:           make(chan *slashCommand),
 		webhooks:             make(map[string]*registeredWebhook),
 		pluginWebhookChannel: make(chan *PluginWebhook),
+		reactionHooks:        []*registeredReactionHook{},
 		hooks:                []*registeredHook{},
 		db:                   db,
 	}, nil

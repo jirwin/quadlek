@@ -139,5 +139,6 @@ func Register(apikey string) quadlek.Plugin {
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 }

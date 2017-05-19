@@ -63,6 +63,7 @@ func Register(consumerKey, consumerSecret, accessToken, accessSecret string, fil
 		nil,
 		nil,
 		nil,
+		nil,
 		load(consumerKey, consumerSecret, accessToken, accessSecret, filter),
 	)
 }

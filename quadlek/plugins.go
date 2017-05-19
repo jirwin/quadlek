@@ -101,6 +101,42 @@ func MakeHook(runFunc func(ctx context.Context, hookChan <-chan *HookMsg)) Hook 
 	}
 }
 
+type ReactionHook interface {
+	Channel() chan<- *ReactionHookMsg
+	Run(ctx context.Context)
+}
+
+type ReactionHookMsg struct {
+	Bot      *Bot
+	Reaction *slack.ReactionAddedEvent
+	Store    *Store
+}
+
+type registeredReactionHook struct {
+	PluginId     string
+	ReactionHook ReactionHook
+}
+
+type reactionHook struct {
+	channel chan *ReactionHookMsg
+	runFunc func(ctx context.Context, reactionHookChan <-chan *ReactionHookMsg)
+}
+
+func (r *reactionHook) Channel() chan<- *ReactionHookMsg {
+	return r.channel
+}
+
+func (r *reactionHook) Run(ctx context.Context) {
+	r.runFunc(ctx, r.channel)
+}
+
+func MakeReactionHook(runFunc func(ctx context.Context, reactionHookChan <-chan *ReactionHookMsg)) ReactionHook {
+	return &reactionHook{
+		channel: make(chan *ReactionHookMsg),
+		runFunc: runFunc,
+	}
+}
+
 type Webhook interface {
 	GetName() string
 	Channel() chan<- *WebhookMsg
@@ -138,7 +174,7 @@ func (wh *webhook) Run(ctx context.Context) {
 
 func MakeWebhook(name string, runFunc func(ctx context.Context, whChan <-chan *WebhookMsg)) Webhook {
 	return &webhook{
-		name: name,
+		name:    name,
 		runFunc: runFunc,
 		channel: make(chan *WebhookMsg),
 	}
@@ -149,17 +185,19 @@ type Plugin interface {
 	GetCommands() []Command
 	GetHooks() []Hook
 	GetWebhooks() []Webhook
+	GetReactionHooks() []ReactionHook
 	Load(bot *Bot, store *Store) error
 }
 
 type loadPluginFn func(bot *Bot, store *Store) error
 
 type plugin struct {
-	id       string
-	commands []Command
-	hooks    []Hook
-	webhooks []Webhook
-	loadFn   loadPluginFn
+	id            string
+	commands      []Command
+	hooks         []Hook
+	reactionHooks []ReactionHook
+	webhooks      []Webhook
+	loadFn        loadPluginFn
 }
 
 func (p *plugin) GetId() string {
@@ -178,11 +216,15 @@ func (p *plugin) GetWebhooks() []Webhook {
 	return p.webhooks
 }
 
+func (p *plugin) GetReactionHooks() []ReactionHook {
+	return p.reactionHooks
+}
+
 func (p *plugin) Load(bot *Bot, store *Store) error {
 	return p.loadFn(bot, store)
 }
 
-func MakePlugin(id string, commands []Command, hooks []Hook, webhooks []Webhook, loadFunction loadPluginFn) Plugin {
+func MakePlugin(id string, commands []Command, hooks []Hook, reactionHooks []ReactionHook, webhooks []Webhook, loadFunction loadPluginFn) Plugin {
 	if loadFunction == nil {
 		loadFunction = func(bot *Bot, store *Store) error {
 			return nil
@@ -190,11 +232,12 @@ func MakePlugin(id string, commands []Command, hooks []Hook, webhooks []Webhook,
 	}
 
 	return &plugin{
-		id:       id,
-		commands: commands,
-		hooks:    hooks,
-		webhooks: webhooks,
-		loadFn:   loadFunction,
+		id:            id,
+		commands:      commands,
+		hooks:         hooks,
+		webhooks:      webhooks,
+		reactionHooks: reactionHooks,
+		loadFn:        loadFunction,
 	}
 }
 
@@ -275,6 +318,19 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 		}(hook)
 	}
 
+	for _, reactionHook := range plugin.GetReactionHooks() {
+		b.reactionHooks = append(b.reactionHooks, &registeredReactionHook{
+			PluginId:     plugin.GetId(),
+			ReactionHook: reactionHook,
+		})
+		go func(r ReactionHook) {
+			b.wg.Add(1)
+			defer b.wg.Done()
+
+			r.Run(b.ctx)
+		}(reactionHook)
+	}
+
 	for _, webhook := range plugin.GetWebhooks() {
 		_, ok := b.webhooks[webhook.GetName()]
 		if ok {
@@ -314,15 +370,25 @@ func (b *Bot) dispatchCommand(slashCmd *slashCommand) {
 }
 
 func (b *Bot) dispatchWebhook(webhook *PluginWebhook) {
-	wh :=  b.GetWebhook(webhook.Name)
+	wh := b.GetWebhook(webhook.Name)
 	if wh == nil {
 		return
 	}
 
 	wh.Webhook.Channel() <- &WebhookMsg{
-		Bot: b,
+		Bot:     b,
 		Request: webhook.Request,
-		Store: b.getStore(wh.PluginId),
+		Store:   b.getStore(wh.PluginId),
+	}
+}
+
+func (b *Bot) dispatchReactions(ev *slack.ReactionAddedEvent) {
+	for _, reactionHook := range b.reactionHooks {
+		reactionHook.ReactionHook.Channel() <- &ReactionHookMsg{
+			Bot:      b,
+			Reaction: ev,
+			Store:    b.getStore(reactionHook.PluginId),
+		}
 	}
 }
 
