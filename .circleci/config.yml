@@ -15,6 +15,14 @@ jobs:
             curl -L -o /tmp/docker-$VER.tgz https://get.docker.com/builds/Linux/x86_64/docker-$VER.tgz
             tar -xz -C /tmp -f /tmp/docker-$VER.tgz
             mv /tmp/docker/* /usr/bin
+      - run:
+          name: Build builder container
+          command: |
+            docker build -t build-img -f Dockerfile.build
+      - run:
+          name: Run builder container
+          command: |
+            docker run --rm -v $PWD/release:/build build-img
       - run: |
           TAG=0.1.$CICLE_BUILD_NUM
           docker build -t dosilek/quadlek:$TAG .
