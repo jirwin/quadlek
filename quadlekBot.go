@@ -14,6 +14,7 @@ import (
 	"github.com/jirwin/quadlek/plugins/spotify"
 	"github.com/jirwin/quadlek/plugins/twitter"
 	"github.com/jirwin/quadlek/quadlek"
+
 	"github.com/urfave/cli"
 )
 
@@ -93,19 +94,21 @@ func run(c *cli.Context) error {
 			"26786244":           "general",  // @schonstal
 			"770397982797602816": "general",  // @mosh_bot
 			"2317524115":         "general",  // @PHP_CEO
-			"16589206":           "politics", // @wikileaks
 			"2189503302":         "random",   // @nytminuscontext
 			"120252183":          "random",   // @fakescience
 		},
 	))
 
-	//err = bot.RegisterPlugin(cointip.Register(
+	//coinbasePlugin := cointip.Register(
 	//	c.String("coinbase-key"),
 	//	c.String("coinbase-secret"),
 	//	c.String("coinbase-account"),
-	//))
-	//if err != nil {
-	//	panic(err)
+	//)
+	//if coinbasePlugin != nil {
+	//	err = bot.RegisterPlugin(coinbasePlugin)
+	//	if err != nil {
+	//		panic(err)
+	//	}
 	//}
 
 	signals := make(chan os.Signal, 1)
