@@ -11,6 +11,6 @@ jobs:
             docker build -t build-img -f Dockerfile.build .
             docker run --rm -v $PWD/release:/build build-img
             TAG=0.1.$CICLE_BUILD_NUM
-            docker build -t dosilek/quadlek:$TAG .
+            docker build -t quay.io/dosilek/quadlek:$TAG .
             docker login -u $DOCKER_USER -p $DOCKER_PASS quay.io
             docker push quay.io/dosilek/quadlek:$TAG
