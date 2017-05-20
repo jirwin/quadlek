@@ -16,15 +16,11 @@ jobs:
             tar -xz -C /tmp -f /tmp/docker-$VER.tgz
             mv /tmp/docker/* /usr/bin
       - run:
-          name: Build builder container
+          name: Build container
           command: |
             docker build -t build-img -f Dockerfile.build .
-      - run:
-          name: Run builder container
-          command: |
             docker run --rm -v $PWD/release:/build build-img
-      - run: |
-          TAG=0.1.$CICLE_BUILD_NUM
-          docker build -t dosilek/quadlek:$TAG .
-          docker login quay.io -u $DOCKER_USER -p $DOCKER_PASS
-          docker push dosilek/quadlek:$TAG
+            TAG=0.1.$CICLE_BUILD_NUM
+            docker build -t dosilek/quadlek:$TAG .
+            docker login quay.io -u $DOCKER_USER -p $DOCKER_PASS
+            docker push dosilek/quadlek:$TAG
