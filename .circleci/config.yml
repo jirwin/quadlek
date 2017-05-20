@@ -1,6 +1,8 @@
 version: 2
 jobs:
   build:
+    docker:
+      - image: buildpack-deps:trusty
     working_directory: /go/src/github.com/jirwin/quadlek
     steps:
       - checkout
