@@ -18,7 +18,7 @@ jobs:
       - run:
           name: Build builder container
           command: |
-            docker build -t build-img -f Dockerfile.build
+            docker build -t build-img -f Dockerfile.build .
       - run:
           name: Run builder container
           command: |
