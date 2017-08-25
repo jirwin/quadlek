@@ -40,7 +40,7 @@ func load(consumerKey, consumerSecret, accessToken, accessSecret string, filter 
 					switch m := msg.(type) {
 					case *twitter.Tweet:
 						if channel, ok := filter[m.User.IDStr]; ok {
-							if replyChannel, ok := filter[m.InReplyToUserIDStr]; !ok || channel != replyChannel {
+							if replyChannel, ok := filter[m.RetweetedStatus.User.IDStr]; !ok || channel != replyChannel {
 								twitterUrl := fmt.Sprintf("https://twitter.com/%s/status/%s", m.User.ScreenName, m.IDStr)
 								chanId, err := bot.GetChannelId(channel)
 								if err != nil {
