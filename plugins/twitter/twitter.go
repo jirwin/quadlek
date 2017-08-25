@@ -42,7 +42,7 @@ func load(consumerKey, consumerSecret, accessToken, accessSecret string, filter 
 						if channel, ok := filter[m.User.IDStr]; ok {
 							if m.RetweetedStatus != nil {
 								if replyChannel, ok := filter[m.RetweetedStatus.User.IDStr]; ok || channel == replyChannel {
-									return
+									continue
 								}			    
 							}
 							twitterUrl := fmt.Sprintf("https://twitter.com/%s/status/%s", m.User.ScreenName, m.IDStr)
