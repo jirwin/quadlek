@@ -31,6 +31,7 @@ type slashCommand struct {
 	Command      string            `schema:"command"`
 	Text         string            `schema:"text"`
 	ResponseUrl  string            `schema:"response_url"`
+	TriggerId    string            `schema:"trigger_id"`
 	responseChan chan *CommandResp `schema:"-"`
 }
 
