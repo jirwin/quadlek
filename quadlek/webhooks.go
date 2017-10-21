@@ -31,7 +31,6 @@ type slashCommand struct {
 	Command      string            `schema:"command"`
 	Text         string            `schema:"text"`
 	ResponseUrl  string            `schema:"response_url"`
-	TriggerId    string            `schema:"trigger_id"`
 	responseChan chan *CommandResp `schema:"-"`
 }
 
@@ -70,6 +69,7 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cmd := &slashCommand{}
+	decoder.IgnoreUnknownKeys(true)
 	err = decoder.Decode(cmd, r.PostForm)
 	if err != nil {
 		log.WithFields(log.Fields{
