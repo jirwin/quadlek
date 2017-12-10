@@ -145,7 +145,7 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 				repo = repoParts[0]
 			}
 
-			title := cmdMsg.Command.Text
+			title := msg[1]
 			if title == "" {
 				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 					Text: fmt.Sprintf("You must provide a title."),
