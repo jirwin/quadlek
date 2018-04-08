@@ -93,13 +93,6 @@ func delComicTemplate(templateId string, cmdMsg *quadlek.CommandMsg) error {
 }
 
 func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
-	filler := []string{
-		"Hi i made a joke",
-		"That joke was so funny",
-		"You're awesome. And I mean really awesome.",
-		"Even more filler text while I test this",
-	}
-
 	comicUrl := ""
 
 	err := cmdMsg.Store.Get("templates", func(templatesProto []byte) error {
@@ -119,7 +112,23 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 			return err
 		}
 
-		imgBytes, err := comic.Render(filler)
+		msgs, err := cmdMsg.Bot.GetMessageLog(cmdMsg.Command.ChannelId, quadlek.MessageLotOpts{
+			Count: len(comic.Bubbles),
+		})
+		if err != nil {
+			return err
+		}
+
+		if len(msgs) < len(comic.Bubbles) {
+			return fmt.Errorf("Not enough channel history for this comic.")
+		}
+
+		comicTxt := []string{}
+		for _, msg := range msgs {
+			comicTxt = append(comicTxt, msg.Text)
+		}
+
+		imgBytes, err := comic.Render(comicTxt)
 		if err != nil {
 			return err
 		}
