@@ -18,7 +18,7 @@ var (
 )
 
 func addComicTemplate(templateUrl string, cmdMsg *quadlek.CommandMsg) error {
-	err := cmdMsg.Store.GetAndUpdate("template", func(templatesProto []byte) ([]byte, error) {
+	err := cmdMsg.Store.GetAndUpdate("templates", func(templatesProto []byte) ([]byte, error) {
 		templates := &Templates{}
 		err := proto.Unmarshal(templatesProto, templates)
 		if err != nil {
