@@ -181,7 +181,7 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 				Text:      fmt.Sprintf("%s made a new comic: %s", cmdMsg.Command.UserId, comicUrl),
 				InChannel: true,
-			}
+			})
 
 		case <-ctx.Done():
 			log.Info("Exiting comic command.")
