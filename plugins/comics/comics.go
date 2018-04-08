@@ -8,8 +8,11 @@ import (
 	"fmt"
 	"strings"
 
+	"math/rand"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
+	"github.com/jirwin/comics/src/comics"
 	"github.com/jirwin/quadlek/quadlek"
 )
 
@@ -56,6 +59,51 @@ func listTemplates(cmdMsg *quadlek.CommandMsg) ([]string, error) {
 	}
 
 	return templateUrls, nil
+}
+
+func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
+	filler := []string{
+		"Hi i made a joke",
+		"That joke was so funny",
+		"You're awesome. And I mean really awesome.",
+	}
+
+	comicUrl := ""
+
+	err := cmdMsg.Store.Get("templates", func(templatesProto []byte) error {
+		templates := &Templates{}
+		err := proto.Unmarshal(templatesProto, templates)
+		if err != nil {
+			return err
+		}
+
+		if len(templates.Urls) == 0 {
+			return fmt.Errorf("error: no configured templates")
+		}
+
+		template := templates.Urls[rand.Intn(len(templates.Urls))]
+		comic, err := comics.NewTemplate(template)
+		if err != nil {
+			return err
+		}
+
+		imgBytes, err := comic.Render(filler)
+		if err != nil {
+			return err
+		}
+
+		comicUrl, err = comics.ImgurUpload(imgBytes, clientId)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return comicUrl, nil
 }
 
 func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
@@ -118,7 +166,20 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 					})
 				}
 
-				continue
+				comicUrl, err := pickAndRenderTemplate(cmdMsg)
+				if err != nil {
+					cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+						Text:      fmt.Sprintf("error rendering template: %s", err.Error()),
+						InChannel: false,
+					})
+					continue
+				}
+
+				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+					Text:      fmt.Sprintf("%s made a new comic: %s", cmdMsg.Command.UserId, comicUrl),
+					InChannel: true,
+				})
+
 			}
 
 		case <-ctx.Done():
