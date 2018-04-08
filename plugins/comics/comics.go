@@ -22,6 +22,7 @@ import (
 
 var (
 	clientId string
+	fontPath string
 )
 
 func addComicTemplate(templateUrl string, cmdMsg *quadlek.CommandMsg) error {
@@ -113,7 +114,7 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 		}
 
 		template := templates.Urls[rand.Intn(len(templates.Urls))]
-		comic, err := comics.NewTemplate(template)
+		comic, err := comics.NewTemplate(template, fontPath)
 		if err != nil {
 			return err
 		}
@@ -259,8 +260,9 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	}
 }
 
-func Register(imgurClientId string) quadlek.Plugin {
+func Register(imgurClientId, comicFontPath string) quadlek.Plugin {
 	clientId = imgurClientId
+	fontPath = comicFontPath
 
 	return quadlek.MakePlugin(
 		"comics",
