@@ -2,6 +2,6 @@ syntax = "proto3";
 
 package comics;
 
-message Template {
-    string url = 1;
+message Templates {
+    repeated string urls = 1;
 }
