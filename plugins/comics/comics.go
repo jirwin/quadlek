@@ -166,20 +166,21 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 					})
 				}
 
-				comicUrl, err := pickAndRenderTemplate(cmdMsg)
-				if err != nil {
-					cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
-						Text:      fmt.Sprintf("error rendering template: %s", err.Error()),
-						InChannel: false,
-					})
-					continue
-				}
+				continue
+			}
 
+			comicUrl, err := pickAndRenderTemplate(cmdMsg)
+			if err != nil {
 				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
-					Text:      fmt.Sprintf("%s made a new comic: %s", cmdMsg.Command.UserId, comicUrl),
-					InChannel: true,
+					Text:      fmt.Sprintf("error rendering template: %s", err.Error()),
+					InChannel: false,
 				})
+				continue
+			}
 
+			cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+				Text:      fmt.Sprintf("%s made a new comic: %s", cmdMsg.Command.UserId, comicUrl),
+				InChannel: true,
 			}
 
 		case <-ctx.Done():
