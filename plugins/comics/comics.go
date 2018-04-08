@@ -12,6 +12,8 @@ import (
 
 	"strconv"
 
+	"html"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/comics/src/comics"
@@ -92,6 +94,10 @@ func delComicTemplate(templateId string, cmdMsg *quadlek.CommandMsg) error {
 	})
 }
 
+func formatLogMsg(text string) string {
+	return html.UnescapeString(text)
+}
+
 func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 	comicUrl := ""
 
@@ -125,7 +131,7 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 
 		comicTxt := []string{}
 		for i := len(comic.Bubbles) - 1; i >= 0; i-- {
-			comicTxt = append(comicTxt, msgs[i].Text)
+			comicTxt = append(comicTxt, formatLogMsg(msgs[i].Text))
 		}
 
 		imgBytes, err := comic.Render(comicTxt)
