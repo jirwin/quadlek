@@ -66,6 +66,7 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 		"Hi i made a joke",
 		"That joke was so funny",
 		"You're awesome. And I mean really awesome.",
+		"Even more filler text while I test this",
 	}
 
 	comicUrl := ""
