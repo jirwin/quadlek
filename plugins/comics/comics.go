@@ -190,8 +190,8 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	}
 }
 
-func Register(clientId string) quadlek.Plugin {
-	clientId = clientId
+func Register(imgurClientId string) quadlek.Plugin {
+	clientId = imgurClientId
 
 	return quadlek.MakePlugin(
 		"comics",
