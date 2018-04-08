@@ -34,16 +34,28 @@ func addComicTemplate(templateUrl string, cmdMsg *quadlek.CommandMsg) error {
 
 		return updatedTemplates, nil
 	})
-	if err != nil {
-		return err
-	}
 
-	cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
-		Text:      "Successfully added template " + templateUrl,
-		InChannel: false,
+	return err
+}
+
+func listTemplates(cmdMsg *quadlek.CommandMsg) ([]string, error) {
+	var templateUrls []string
+
+	err := cmdMsg.Store.Get("templates", func(templateProto []byte) error {
+		templates := &Templates{}
+		err := proto.Unmarshal(templateProto, templates)
+		if err != nil {
+			return err
+		}
+		templateUrls = templates.Urls
+		return nil
 	})
 
-	return nil
+	if err != nil {
+		return nil, err
+	}
+
+	return templateUrls, nil
 }
 
 func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
@@ -55,6 +67,34 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			if cmdMsg.Command.Text != "" {
 				split := strings.Split(cmdMsg.Command.Text, " ")
 				switch split[0] {
+				case "list":
+					templates, err := listTemplates(cmdMsg)
+					if err != nil {
+						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+							Text:      fmt.Sprintf("error listing template"),
+							InChannel: false,
+						})
+						continue
+					}
+
+					if len(templates) == 0 {
+						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+							Text:      "There are no templates configured.",
+							InChannel: false,
+						})
+						continue
+					}
+
+					msgText := "Configured templates:\n"
+					for i, template := range templates {
+						msgText += fmt.Sprintf("%d. %s\n", i, template)
+					}
+
+					cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+						Text:      msgText,
+						InChannel: false,
+					})
+
 				case "load":
 					if len(split) != 2 {
 						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
