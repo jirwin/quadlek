@@ -16,7 +16,7 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/quadlek/quadlek"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 	"github.com/zmb3/spotify"
 	"golang.org/x/oauth2"
 )
@@ -75,7 +75,11 @@ func getSpotifyClient(authToken *AuthToken) (spotify.Client, bool) {
 }
 
 func authFlow(cmdMsg *quadlek.CommandMsg, bkt *bolt.Bucket) error {
-	stateId := uuid.NewV4().String()
+	uuid, err := uuid.NewV4()
+	if err != nil {
+		return err
+	}
+	stateId := uuid.String()
 	authUrl := startAuthFlow(stateId)
 
 	authState := &AuthState{
