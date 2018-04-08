@@ -10,6 +10,8 @@ import (
 
 	"math/rand"
 
+	"strconv"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/comics/src/comics"
@@ -59,6 +61,35 @@ func listTemplates(cmdMsg *quadlek.CommandMsg) ([]string, error) {
 	}
 
 	return templateUrls, nil
+}
+
+func delComicTemplate(templateId string, cmdMsg *quadlek.CommandMsg) error {
+	return cmdMsg.Store.GetAndUpdate("templates", func(templateProto []byte) ([]byte, error) {
+		templates := &Templates{}
+		err := proto.Unmarshal(templateProto, templates)
+		if err != nil {
+			return nil, err
+		}
+		newTemplateUrls := []string{}
+		tId, err := strconv.Atoi(templateId)
+		if err != nil {
+			return nil, err
+		}
+
+		for i, url := range templates.Urls {
+			if i != tId {
+				newTemplateUrls = append(newTemplateUrls, url)
+			}
+		}
+
+		templates.Urls = newTemplateUrls
+		templateBytes, err := proto.Marshal(templates)
+		if err != nil {
+			return nil, err
+		}
+
+		return templateBytes, nil
+	})
 }
 
 func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
@@ -141,6 +172,28 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 
 					cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 						Text:      msgText,
+						InChannel: false,
+					})
+
+				case "del":
+					if len(split) != 2 {
+						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+							Text:      "You must provide the id of the template to delete.",
+							InChannel: false,
+						})
+						continue
+					}
+					err := delComicTemplate(split[1], cmdMsg)
+					if err != nil {
+						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+							Text:      fmt.Sprintf("error deleting template: %s", err.Error()),
+							InChannel: false,
+						})
+						continue
+					}
+
+					cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+						Text:      "Successfully deleted template " + split[1],
 						InChannel: false,
 					})
 
