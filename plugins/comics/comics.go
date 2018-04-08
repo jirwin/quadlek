@@ -113,7 +113,7 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 		}
 
 		msgs, err := cmdMsg.Bot.GetMessageLog(cmdMsg.Command.ChannelId, quadlek.MessageLotOpts{
-			Count: len(comic.Bubbles),
+		//Count: len(comic.Bubbles),
 		})
 		if err != nil {
 			return err
