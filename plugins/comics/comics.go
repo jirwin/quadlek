@@ -118,9 +118,7 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 			return err
 		}
 
-		msgs, err := cmdMsg.Bot.GetMessageLog(cmdMsg.Command.ChannelId, quadlek.MessageLotOpts{
-		//Count: len(comic.Bubbles),
-		})
+		msgs, err := cmdMsg.Bot.GetMessageLog(cmdMsg.Command.ChannelId, quadlek.MessageLotOpts{})
 		if err != nil {
 			return err
 		}
@@ -131,6 +129,7 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 
 		comicTxt := []string{}
 		for i := len(comic.Bubbles) - 1; i >= 0; i-- {
+			fmt.Printf("%+v\n", msgs[i])
 			comicTxt = append(comicTxt, formatLogMsg(msgs[i].Text))
 		}
 
