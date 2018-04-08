@@ -124,7 +124,7 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 		}
 
 		comicTxt := []string{}
-		for i := len(msgs) - 1; i <= 0; i-- {
+		for i := len(msgs) - 1; i >= 0; i-- {
 			comicTxt = append(comicTxt, msgs[i].Text)
 		}
 
