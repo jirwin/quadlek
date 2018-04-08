@@ -17,7 +17,10 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	for {
 		select {
 		case cmdMsg := <-cmdChannel:
-			cmdMsg.Command.Reply() <- nil
+			cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+				Text:      "got a comic request",
+				InChannel: false,
+			}
 
 		case <-ctx.Done():
 			log.Info("Exiting comic command.")
