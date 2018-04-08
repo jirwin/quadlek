@@ -9,9 +9,10 @@ import (
 )
 
 type MessageLotOpts struct {
-	IncludeBots bool
-	Count       int
-	Period      time.Duration
+	IncludeBots     bool
+	Count           int
+	Period          time.Duration
+	SkipAttachments bool
 }
 
 type LogMessage struct {
@@ -37,6 +38,10 @@ func (b *Bot) GetMessageLog(channel string, opts MessageLotOpts) ([]slack.Messag
 	msgs := []slack.Message{}
 	for _, msg := range history.Messages {
 		if !opts.IncludeBots && msg.SubType == "bot_message" {
+			continue
+		}
+
+		if opts.SkipAttachments && len(msg.Attachments) != 0 {
 			continue
 		}
 

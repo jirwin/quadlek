@@ -118,7 +118,9 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 			return err
 		}
 
-		msgs, err := cmdMsg.Bot.GetMessageLog(cmdMsg.Command.ChannelId, quadlek.MessageLotOpts{})
+		msgs, err := cmdMsg.Bot.GetMessageLog(cmdMsg.Command.ChannelId, quadlek.MessageLotOpts{
+			SkipAttachments: true,
+		})
 		if err != nil {
 			return err
 		}
