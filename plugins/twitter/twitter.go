@@ -40,13 +40,13 @@ func load(consumerKey, consumerSecret, accessToken, accessSecret string, filter 
 					switch m := msg.(type) {
 					case *twitter.Tweet:
 						if channel, ok := filter[m.User.IDStr]; ok {
-							if m.RetweetedStatus != nil {
-								log.WithField("tweet", m).Info("Got a tweet containing a retweet")
-								if replyChannel, ok := filter[m.RetweetedStatus.User.IDStr]; ok && channel == replyChannel {
-									log.WithField("tweet", m).Info("Tweet contains retweet from already monitored account, cancelling message")
-									continue
-								}			    
-							}
+							//if m.RetweetedStatus != nil {
+							//	log.WithField("tweet", m).Info("Got a tweet containing a retweet")
+							//	if replyChannel, ok := filter[m.RetweetedStatus.User.IDStr]; ok && channel == replyChannel {
+							//		log.WithField("tweet", m).Info("Tweet contains retweet from already monitored account, cancelling message")
+							//		continue
+							//	}
+							//}
 							twitterUrl := fmt.Sprintf("https://twitter.com/%s/status/%s", m.User.ScreenName, m.IDStr)
 							chanId, err := bot.GetChannelId(channel)
 							if err != nil {
