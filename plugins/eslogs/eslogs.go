@@ -53,10 +53,10 @@ func logHook(ctx context.Context, hookchan <-chan *quadlek.HookMsg) {
 			}
 			channel, err := hookMsg.Bot.GetChannel(hookMsg.Msg.Channel)
 			if err != nil {
-				log.WithError(err).Error("error getting channel")
-				continue
+				msg.Channel = "unknown"
+			} else {
+				msg.Channel = channel.Name
 			}
-			msg.Channel = channel.Name
 
 			txt := formatText(hookMsg.Bot, hookMsg.Msg.Text)
 			msg.Text = txt

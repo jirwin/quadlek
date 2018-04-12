@@ -117,6 +117,15 @@ func (b *Bot) HandleEvents() {
 			case *slack.ConnectedEvent:
 				b.username = ev.Info.User.Name
 				b.userId = ev.Info.User.ID
+				channels, err := b.api.GetChannels(true)
+				if err != nil {
+					log.WithError(err).Error("Unable to list channels")
+					continue
+				}
+				for _, channel := range channels {
+					b.channels[channel.ID] = channel
+					b.humanChannels[channel.Name] = channel
+				}
 
 			case *slack.ChannelJoinedEvent:
 				b.channels[ev.Channel.ID] = ev.Channel
