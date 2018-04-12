@@ -5,6 +5,9 @@ import (
 
 	"fmt"
 
+	"regexp"
+	"strings"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/jirwin/quadlek/quadlek"
 	"gopkg.in/olivere/elastic.v5"
@@ -16,11 +19,49 @@ var (
 	esClient   *elastic.Client
 )
 
+type SlackMsgLog struct {
+	Timestamp string `json:"ts"`
+	Channel   string `json:"channel"`
+	User      string `json:"user"`
+	Text      string `json:"text"`
+}
+
+var SlackUserMatch = regexp.MustCompile("<@U.+>")
+
+func formatText(bot *quadlek.Bot, txt string) string {
+	formattedText := SlackUserMatch.ReplaceAllStringFunc(txt, func(s string) string {
+		userId := strings.TrimLeft(strings.TrimRight(s, ">"), "<@")
+
+		user, err := bot.GetUser(userId)
+		if err != nil {
+			return s
+		}
+
+		return user.Name
+	})
+
+	return formattedText
+}
+
 func logHook(ctx context.Context, hookchan <-chan *quadlek.HookMsg) {
 	for {
 		select {
 		case hookMsg := <-hookchan:
-			_, err := esClient.Index().Index(esIndex).Type("slack-msg").Id(hookMsg.Msg.Timestamp).BodyJson(hookMsg.Msg).Do(ctx)
+			msg := SlackMsgLog{
+				Timestamp: hookMsg.Msg.Timestamp,
+				User:      hookMsg.Msg.Username,
+			}
+			channel, err := hookMsg.Bot.GetChannel(hookMsg.Msg.Channel)
+			if err != nil {
+				log.WithError(err).Error("error getting channel")
+				continue
+			}
+			msg.Channel = channel.Name
+
+			txt := formatText(hookMsg.Bot, hookMsg.Msg.Text)
+			msg.Text = txt
+
+			_, err = esClient.Index().Index(esIndex).Type("slack-msg").Id(hookMsg.Msg.Timestamp).BodyJson(msg).Do(ctx)
 			if err != nil {
 				log.WithError(err).Error("Error indexing log to ES")
 				continue

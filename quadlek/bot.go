@@ -58,6 +58,24 @@ func (b *Bot) GetChannelId(chanName string) (string, error) {
 	return channel.ID, nil
 }
 
+func (b *Bot) GetChannel(chanId string) (*slack.Channel, error) {
+	channel, ok := b.channels[chanId]
+	if !ok {
+		return nil, errors.New("Channel not found.")
+	}
+
+	return &channel, nil
+}
+
+func (b *Bot) GetUser(userId string) (*slack.User, error) {
+	user, ok := b.users[userId]
+	if !ok {
+		return nil, errors.New("User not found.")
+	}
+
+	return &user, nil
+}
+
 func (b *Bot) GetUserName(userId string) (string, error) {
 	user, ok := b.users[userId]
 	if !ok {
