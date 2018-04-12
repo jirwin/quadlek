@@ -49,13 +49,19 @@ func logHook(ctx context.Context, hookchan <-chan *quadlek.HookMsg) {
 		case hookMsg := <-hookchan:
 			msg := SlackMsgLog{
 				Timestamp: hookMsg.Msg.Timestamp,
-				User:      hookMsg.Msg.Username,
 			}
 			channel, err := hookMsg.Bot.GetChannel(hookMsg.Msg.Channel)
 			if err != nil {
 				msg.Channel = "unknown"
 			} else {
 				msg.Channel = channel.Name
+			}
+
+			user, err := hookMsg.Bot.GetUser(hookMsg.Msg.User)
+			if err != nil {
+				msg.User = "unknown"
+			} else {
+				msg.User = user.Name
 			}
 
 			txt := formatText(hookMsg.Bot, hookMsg.Msg.Text)
