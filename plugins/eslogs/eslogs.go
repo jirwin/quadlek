@@ -61,6 +61,10 @@ func logHook(ctx context.Context, hookchan <-chan *quadlek.HookMsg) {
 			txt := formatText(hookMsg.Bot, hookMsg.Msg.Text)
 			msg.Text = txt
 
+			if hookMsg.Msg.SubType != "bot_msg" && hookMsg.Msg.SubType != "" {
+				continue
+			}
+
 			_, err = esClient.Index().Index(esIndex).Type("slack-msg").Id(hookMsg.Msg.Timestamp).BodyJson(msg).Do(ctx)
 			if err != nil {
 				log.WithError(err).Error("Error indexing log to ES")
