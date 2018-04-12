@@ -28,3 +28,5 @@ _testmain.go
 quadlekBot
 *.db
 vendor
+Gopkg.lock
+Gopkg.toml
