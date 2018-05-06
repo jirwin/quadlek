@@ -75,11 +75,9 @@ func getSpotifyClient(authToken *AuthToken) (spotify.Client, bool) {
 }
 
 func authFlow(cmdMsg *quadlek.CommandMsg, bkt *bolt.Bucket) error {
-	uuid, err := uuid.NewV4()
-	if err != nil {
-		return err
-	}
-	stateId := uuid.String()
+	id := uuid.NewV4()
+
+	stateId := id.String()
 	authUrl := startAuthFlow(stateId)
 
 	authState := &AuthState{

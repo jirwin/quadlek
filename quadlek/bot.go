@@ -36,6 +36,7 @@ type Bot struct {
 	hooks                []*registeredHook
 	reactionHooks        []*registeredReactionHook
 	db                   *bolt.DB
+	apiUrl               string
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	wg                   sync.WaitGroup
@@ -65,6 +66,10 @@ func (b *Bot) GetChannel(chanId string) (*slack.Channel, error) {
 	}
 
 	return &channel, nil
+}
+
+func (b *Bot) GetApiUrl() string {
+	return b.apiUrl
 }
 
 func (b *Bot) GetUser(userId string) (*slack.User, error) {
@@ -216,7 +221,7 @@ func (b *Bot) Stop() {
 	b.rtm.Disconnect()
 }
 
-func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string) (*Bot, error) {
+func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath, apiUrl string) (*Bot, error) {
 	// Seed the RNG with the current time globally
 	rand.Seed(time.Now().UnixNano())
 
@@ -244,5 +249,6 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 		reactionHooks:        []*registeredReactionHook{},
 		hooks:                []*registeredHook{},
 		db:                   db,
+		apiUrl:               apiUrl,
 	}, nil
 }
