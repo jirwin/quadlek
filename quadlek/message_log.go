@@ -8,6 +8,15 @@ import (
 	"github.com/nlopes/slack"
 )
 
+// MessageLotOpts is the stuct that you use to configure what messages you want to retrieve from the API.
+//
+// IncludeBots: If true, include messages from bots(not just quadlek bots)
+//
+// Count: The max number of messages to return
+//
+// Period: The amount of time to look backwards when looking for messages
+//
+// SkipAttachments: If true, don't return message attachments.
 type MessageLotOpts struct {
 	IncludeBots     bool
 	Count           int
@@ -15,10 +24,7 @@ type MessageLotOpts struct {
 	SkipAttachments bool
 }
 
-type LogMessage struct {
-	Text string
-}
-
+// GetMessageLog uses channel and a set of options to get historical messages from the Slack API.
 func (b *Bot) GetMessageLog(channel string, opts MessageLotOpts) ([]slack.Message, error) {
 	params := slack.NewHistoryParameters()
 	if opts.Count != 0 {

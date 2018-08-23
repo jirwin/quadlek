@@ -11,15 +11,15 @@ import (
 	"github.com/gorilla/schema"
 )
 
-const WebhookRoot = "https://quadlek.jirw.in/slack/plugin"
-
 var decoder = schema.NewDecoder()
 
+// PluginWebhook stores an incoming web request to be passed to a plugin
 type PluginWebhook struct {
 	Name    string
 	Request *http.Request
 }
 
+// slashCommand is an internal object that parses slash command webhooks coming from the Slack servers
 type slashCommand struct {
 	Token        string            `schema:"token"`
 	TeamId       string            `schema:"team_id"`
@@ -34,21 +34,25 @@ type slashCommand struct {
 	responseChan chan *CommandResp `schema:"-"`
 }
 
+// Reply returns the channel to write command responses to.
 func (sc *slashCommand) Reply() chan<- *CommandResp {
 	return sc.responseChan
 }
 
+// slashCommandErrorResponse is used to return an error to the user when a slash command can't be completed successfully
 type slashCommandErrorResponse struct {
 	ResponseType string `json:"response_type"`
 	Text         string `json:"text"`
 }
 
+// jsonResponse encodes a generic object to json and writes it to the provided HTTP response
 func jsonResponse(w http.ResponseWriter, obj interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(obj)
 }
 
+// generateErrorMsg encodes a slashCommandErrorResponse to json and writes it to the provided HTTP response
 func generateErrorMsg(w http.ResponseWriter, msg string) {
 	resp := &slashCommandErrorResponse{
 		ResponseType: "ephemeral",
@@ -58,6 +62,9 @@ func generateErrorMsg(w http.ResponseWriter, msg string) {
 	jsonResponse(w, resp)
 }
 
+// handleSlackCommand is an http handler that parses an incoming slash command webhook
+// and dispatches it to the proper plugin.
+// It attempts to handle responding to the request if the plugin doesn't respond in time.
 func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -117,6 +124,7 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handlePluginWebhook is an http handler that dispatches custom webhooks to the appropriate plugin
 func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	b.pluginWebhookChannel <- &PluginWebhook{
@@ -128,11 +136,16 @@ func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte{})
 }
 
+// WebhookServer starts a new http server that listens and responds to incoming webhooks.
+// The Slack API uses webhooks for processing slash commands, and this server is used to respond to them.
+// Plugins can also register custom webhooks that can be used however they choose. An example of this would be
+// to process oauth2 callbacks to facilitate oauth2 flows for associating a user's slack account with an external service.
 func (b *Bot) WebhookServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/slack/command", b.handleSlackCommand).Methods("POST")
 	r.HandleFunc("/slack/plugin/{webhook-name}", b.handlePluginWebhook).Methods("GET")
 
+	// TODO(jirwin): This listen address should be configurable
 	srv := &http.Server{Addr: ":8000", Handler: r}
 
 	go func() {
