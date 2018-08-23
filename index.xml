@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Quadlek Documentation</title>
+    <link>https://jirwin.github.io/quadlek/</link>
+    <description>Recent content on Quadlek Documentation</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 23 Aug 2018 01:13:26 -0700</lastBuildDate>
+    
+	<atom:link href="https://jirwin.github.io/quadlek/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Quadlek: a customizable slack bot framework</title>
+      <link>https://jirwin.github.io/quadlek/</link>
+      <pubDate>Thu, 23 Aug 2018 01:13:26 -0700</pubDate>
+      
+      <guid>https://jirwin.github.io/quadlek/</guid>
+      <description>Getting Started Quadlek is a framework written in Go for creating a Slack bot that can do your bidding. It is stable, highly concurrent, and customizable via an easy to use plugin interface. Using quadlek, you can easily enable your users to increase(or decrease) productivity with chatops and other fun.
+Quadlek ships with a number of plugins including:
+ karma - Let users give or take points to other users Github - Create, view, and comment on Github issues random - Roll dice, choose from a list of options Spotify - Lets users share what they are listening to and can store any songs linked to into a public shared playlist Twitter - Automatically publish tweets for tracking news, service status updates, etc  Some other plugins that have been developed for Quadlek:</description>
+    </item>
+    
+  </channel>
+</rss>
