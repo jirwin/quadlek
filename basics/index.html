@@ -9,18 +9,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1">
     <meta http-equiv="X-UA-Compatible" content="IE=10" />
-    <title>Getting Started</title>
+    <title>Basics - Quadlek</title>
     <meta name="generator" content="Hugo 0.46" />
 
     
     <meta name="description" content="A slack bot built with customization in mind.">
     
-    <link rel="canonical" href="/">
+    <link rel="canonical" href="/basics/">
     
     <meta name="author" content="Justin Gallardo">
     
 
-    <meta property="og:url" content="/">
+    <meta property="og:url" content="/basics/">
     <meta property="og:title" content="Quadlek">
     <meta property="og:image" content="/images/logo.png">
     <meta name="apple-mobile-web-app-title" content="Quadlek">
@@ -68,9 +68,6 @@
     
     <script src="/javascripts/modernizr.js"></script>
 
-    
-    <link href="/index.xml" rel="alternate" type="application/rss+xml" title="Quadlek" />
-    <link href="/index.xml" rel="feed" type="application/rss+xml" title="Quadlek" />
     
 
   </head>
@@ -188,14 +185,11 @@
 
 
 
-<a class="current" title="Home" href="/">
+<a  title="Home" href="/">
 	
 	Home
 </a>
 
-
-<ul id="scrollspy">
-</ul>
 
 
   
@@ -209,11 +203,14 @@
 
 
 
-<a  title="Basics" href="/basics/">
+<a class="current" title="Basics" href="/basics/">
 	
 	Basics
 </a>
 
+
+<ul id="scrollspy">
+</ul>
 
 
   
@@ -256,45 +253,125 @@
 
 	<article class="article">
 		<div class="wrapper">
+			<h1>Basics </h1>
+
 			
-				<h1>Getting Started </h1>
 
-				
+<p>While using Quadlek to build your Slack bot is meant to be straightforward, understanding the basics will go a long
+ways to helping you accomplish your goals.</p>
 
-<p>Quadlek is a framework written in <a href="https://golang.org">Go</a> for creating a <a href="https://slack.com">Slack</a> bot that can do your bidding.
-It is stable, highly concurrent, and customizable via an easy to use plugin interface. Using quadlek, you can
-easily enable your users to increase(or decrease) productivity with chatops and other fun.</p>
+<p>Quadlek is built with the fantastic <a href="https://github.com/nlopes/slack">nlopes/slack</a> client. If you run into trouble,
+or just want to learn more about what you can do I recommend reading their docs.</p>
 
-<p>Quadlek ships with a number of plugins including:</p>
+<h2 id="slack">Slack</h2>
 
-<ul>
-<li>karma - Let users give or take points to other users</li>
-<li>Github - Create, view, and comment on Github issues</li>
-<li>random - Roll dice, choose from a list of options</li>
-<li>Spotify - Lets users share what they are listening to and can store any songs linked to into a public shared playlist</li>
-<li>Twitter - Automatically publish tweets for tracking news, service status updates, etc</li>
-</ul>
+<h3 id="api">API</h3>
 
-<p>Some other plugins that have been developed for Quadlek:</p>
+<p>The <a href="https://api.slack.com">Slack API</a> is split into two parts: the web API, and the RTM(real time messaging) API.</p>
 
-<ul>
-<li>comics - Generate a comic based on recent chat and upload it to Imgur</li>
-<li>cointip - Tip users with Bitcoin using the Coinbase API</li>
-<li>archive - Archive a URL to IPFS for historical viewing</li>
-</ul>
+<p>The <a href="https://api.slack.com/web">web API</a> allows you to perform operations such as listing users and channels, create
+new commands and webhooks, and view message history for your team.</p>
 
-<h2 id="installation">Installation</h2>
+<p>The <a href="https://api.slack.com/rtm">RTM API</a> is how your bot will send and receive messages to your Slack team.</p>
 
-<p>To begin using Quadlek to build your new Slack bot, you&rsquo;ll need to install the library to your Go path:</p>
+<p>Quadlek exposes access to both of these APIs to plugins so that you can do whatever your heart desires.</p>
 
-<pre><code class="language-bash">$ go get -u github.com/jirwin/quadlek/quadlek
+<h3 id="slash-commands">Slash Commands</h3>
+
+<p>In Slack, the most common way to interact with your bot is to add <a href="https://api.slack.com/slash-commands">slash commands</a>.
+Lets use the following as an example for a slash command that your bot should be able to respond to:</p>
+
+<pre><code class="language-bash">/choose one fish, two fish, red fish, blue fish.
 </code></pre>
 
-<h2 id="license">License</h2>
+<p>Slash commands are registered with the bot in the Slack API before hand with the command name(<code>choose</code> in our example),
+and a callback URL. Note that the callback URL must be a valid HTTPS URL for Slack to succesfully use it. Whenever a user
+activates the command, Slack will send a webhook to the specified URL containing all sorts of information including who
+sent the message, what channel it was sent to, the contents of the command, etc. Your bot then receives the webhook and
+processes it however it should, and can optionally respond to the command publically or privately. Later on, we&rsquo;ll get
+into more about how Quadlek makes this easy for you.</p>
 
-<p>Quadlek is licensed under the Apache v2 license.</p>
+<h2 id="bolt">Bolt</h2>
 
-			
+<p><a href="https://github.com/boltdb/bolt">Bolt</a> is a simple and fast key value store written in Go. It stores a single file on disk in an efficient binary format,
+and provides atomic get and update functionality. Quadlek uses bolt to allow plugins some persistence for things like:</p>
+
+<ul>
+<li>user data</li>
+<li>performing oauth flows</li>
+<li>configuration</li>
+</ul>
+
+<p>Most operations don&rsquo;t require any knowledge of how bolt works, but their documentation can be helpful in a pinch.</p>
+
+<h2 id="quadlek">Quadlek</h2>
+
+<p>Quadlek is built out of 4 major components: the bot, storage, webhook server, and plugins. With these components you are able to fully
+utilize the Slack APIs to build whatever functionality you may need.</p>
+
+<h3 id="bot">Bot</h3>
+
+<p>The bot is the core of the Quadlek framework. It manages your Slack API clients(web and RTM), dispatches various Slack
+events to your plugins and ensure that storage is consistent and available for your plugins to use. Plugins are provided
+an instance of the bot so they can interact with the APIs and storage system.</p>
+
+<h3 id="storage">Storage</h3>
+
+<p>Using bolt, Quadlek provides namespaced(by plugin ID) key value stores for you to persist data across the lifetime of
+your plugin. Plugins are provided a few methods for interacting with storage including: get key, set key, get and update key.</p>
+
+<h3 id="webhook-server">Webhook Server</h3>
+
+<p>The webhook server is an HTTP server that is setup for you to easily receive webhooks for slash commands and custom
+webhooks that your plugins may add.</p>
+
+<p>Note: the webhook server does not currently support HTTPS, so you will need to use
+something like a reverse proxy or load balancer to terminate TLS before passing on requests to your bot.</p>
+
+<h3 id="plugins">Plugins</h3>
+
+<p>Plugins are the building block for giving your bot the ability to interact with your users. Plugins can have a wide
+range of functionality including:</p>
+
+<ul>
+<li>slash commands</li>
+<li>hooks</li>
+<li>reaction hooks</li>
+<li>custom webhooks</li>
+<li>load function</li>
+</ul>
+
+<p>The general pattern for how these are implemented is that your plugin provides a function that forever reads from a
+channel where the bot dispatches events to. As you receive these events, you handle them accordingly.</p>
+
+<h4 id="slash-commands-1">Slash Commands</h4>
+
+<p>As stated before, slash commands are the primary way users can interact with your bot. It is important that your slash
+command&rsquo;s name matches the slash command name that is registered with your Slack application, else the webhook server
+won&rsquo;t be able to dispatch the commands appropriately.</p>
+
+<h4 id="hooks">Hooks</h4>
+
+<p>Hooks receive every message that the bot sees so you can process and handle messages as you see fit. A good example of
+this is the included karma plugin that scans each message to see if a user has incremented or decremented something so
+that it can update storage with the new scores.</p>
+
+<h4 id="reaction-hooks">Reaction Hooks</h4>
+
+<p>Reaction Hooks receive an event every time a user reacts to a message with an emojii. An example of how you could use
+this would be to tweet out a message anytime someone reacts with the <code>:twitter:</code> emojii.</p>
+
+<h4 id="custom-webhooks">Custom Webhooks</h4>
+
+<p>Plugins can implement custom webhook handlers that the webhook server will dispatch. The webhook server receives these
+web requests and forwards them on to your plugin. This allows you to do more complex things like OAuth2 flows to let
+users login and associate their Slack user account with an external service like Twitter or Spotify.</p>
+
+<h4 id="load-function">Load Function</h4>
+
+<p>Occasionally your plugin will need to do some initialization when the bot is started up. You can think of this as the
+entry point to your plugin. Most of the time this isn&rsquo;t required, and can just be set to <code>nil</code>.</p>
+
 
 			<aside class="copyright" role="note">
 				
