@@ -2,21 +2,21 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Getting Started on Quadlek</title>
-    <link>/</link>
+    <link>https://jirwin.github.io/quadlek/</link>
     <description>Recent content in Getting Started on Quadlek</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <lastBuildDate>Thu, 23 Aug 2018 01:13:26 -0700</lastBuildDate>
     
-	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://jirwin.github.io/quadlek/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Basics</title>
-      <link>/basics/</link>
+      <link>https://jirwin.github.io/quadlek/basics/</link>
       <pubDate>Thu, 23 Aug 2018 01:45:39 -0700</pubDate>
       
-      <guid>/basics/</guid>
+      <guid>https://jirwin.github.io/quadlek/basics/</guid>
       <description>While using Quadlek to build your Slack bot is meant to be straightforward, understanding the basics will go a long ways to helping you accomplish your goals.
 Quadlek is built with the fantastic nlopes/slack client. If you run into trouble, or just want to learn more about what you can do I recommend reading their docs.
 Slack API The Slack API is split into two parts: the web API, and the RTM(real time messaging) API.</description>
