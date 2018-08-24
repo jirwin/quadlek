@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+  
+  
+  
+  
+   <html class="no-js"> 
+
+  <head lang="en-us">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,maximum-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=10" />
+    <title>Writing a Plugin - Quadlek</title>
+    <meta name="generator" content="Hugo 0.46" />
+
+    
+    <meta name="description" content="A slack bot built with customization in mind.">
+    
+    <link rel="canonical" href="https://jirwin.github.io/quadlek/writing-a-plugin/">
+    
+    <meta name="author" content="Justin Gallardo">
+    
+
+    <meta property="og:url" content="https://jirwin.github.io/quadlek/writing-a-plugin/">
+    <meta property="og:title" content="Quadlek">
+    <meta property="og:image" content="https://jirwin.github.io/quadlek/images/logo.png">
+    <meta name="apple-mobile-web-app-title" content="Quadlek">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link rel="shortcut icon" type="image/x-icon" href="https://jirwin.github.io/quadlek/images/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="https://jirwin.github.io/quadlek/images/favicon.ico">
+
+    <style>
+      @font-face {
+        font-family: 'Icon';
+        src: url('https://jirwin.github.io/quadlek/fonts/icon.eot');
+        src: url('https://jirwin.github.io/quadlek/fonts/icon.eot')
+               format('embedded-opentype'),
+             url('https://jirwin.github.io/quadlek/fonts/icon.woff')
+               format('woff'),
+             url('https://jirwin.github.io/quadlek/fonts/icon.ttf')
+               format('truetype'),
+             url('https://jirwin.github.io/quadlek/fonts/icon.svg')
+               format('svg');
+        font-weight: normal;
+        font-style: normal;
+      }
+    </style>
+
+    <link rel="stylesheet" href="https://jirwin.github.io/quadlek/stylesheets/application.css">
+    <link rel="stylesheet" href="https://jirwin.github.io/quadlek/stylesheets/temporary.css">
+    <link rel="stylesheet" href="https://jirwin.github.io/quadlek/stylesheets/palettes.css">
+
+    
+    
+    
+    <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Ubuntu:400,700|Ubuntu&#43;Mono">
+    <style>
+      body, input {
+        font-family: 'Ubuntu', Helvetica, Arial, sans-serif;
+      }
+      pre, code {
+        font-family: 'Ubuntu Mono', 'Courier New', 'Courier', monospace;
+      }
+    </style>
+
+    
+    <script src="https://jirwin.github.io/quadlek/javascripts/modernizr.js"></script>
+
+    
+
+  </head>
+  <body class="palette-primary-teal palette-accent-blue">
+
+
+
+	
+	
+
+
+<div class="backdrop">
+	<div class="backdrop-paper"></div>
+</div>
+
+<input class="toggle" type="checkbox" id="toggle-drawer">
+<input class="toggle" type="checkbox" id="toggle-search">
+<label class="toggle-button overlay" for="toggle-drawer"></label>
+
+<header class="header">
+	<nav aria-label="Header">
+  <div class="bar default">
+    <div class="button button-menu" role="button" aria-label="Menu">
+      <label class="toggle-button icon icon-menu" for="toggle-drawer">
+        <span></span>
+      </label>
+    </div>
+    <div class="stretch">
+      <div class="title">
+        Quadlek: a Slack bot framework written in Go
+      </div>
+    </div>
+
+    
+    <div class="button button-twitter" role="button" aria-label="Twitter">
+       <a href="https://twitter.com/jirwin" title="@jirwin on Twitter" target="_blank" class="toggle-button icon icon-twitter"></a>
+    </div>
+    
+
+    
+    <div class="button button-github" role="button" aria-label="GitHub">
+      <a href="https://github.com/jirwin" title="@jirwin on GitHub" target="_blank" class="toggle-button icon icon-github"></a>
+    </div>
+    
+    
+        
+  </div>
+  <div class="bar search">
+    <div class="button button-close" role="button" aria-label="Close">
+      <label class="toggle-button icon icon-back" for="toggle-search"></label>
+    </div>
+    <div class="stretch">
+      <div class="field">
+        <input class="query" type="text" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck>
+      </div>
+    </div>
+    <div class="button button-reset" role="button" aria-label="Search">
+      <button class="toggle-button icon icon-close" id="reset-search"></button>
+    </div>
+  </div>
+</nav>
+
+</header>
+
+<main class="main">
+	<div class="drawer">
+		<nav aria-label="Navigation">
+  <a href="https://github.com/jirwin/quadlek" class="project">
+    <div class="banner">
+      
+        <div class="logo">
+          <img src="https://jirwin.github.io/quadlek/images/logo.png">
+        </div>
+      
+      <div class="name">
+        <strong>Quadlek </strong>
+        
+          <br>
+          jirwin/quadlek
+        
+      </div>
+    </div>
+  </a>
+
+  <div class="scrollable">
+    <div class="wrapper">
+      
+        <ul class="repo">
+          <li class="repo-download">
+            <a href="https://github.com/jirwin/quadlek/archive/master.zip" target="_blank" title="Download" data-action="download">
+              <i class="icon icon-download"></i> Download
+            </a>
+          </li>
+          <li class="repo-stars">
+            <a href="https://github.com/jirwin/quadlek/stargazers" target="_blank" title="Stargazers" data-action="star">
+              <i class="icon icon-star"></i> Stars
+              <span class="count">&ndash;</span>
+            </a>
+          </li>
+        </ul>
+        <hr>
+      
+
+      <div class="toc">
+        
+        <ul>
+          
+
+
+
+
+<li>
+  
+    
+
+
+
+<a  title="Getting Started" href="https://jirwin.github.io/quadlek/">
+	
+	Getting Started
+</a>
+
+
+
+  
+</li>
+
+
+
+<li>
+  
+    
+
+
+
+<a  title="Basics" href="https://jirwin.github.io/quadlek/basics/">
+	
+	Basics
+</a>
+
+
+
+  
+</li>
+
+
+
+<li>
+  
+    
+
+
+
+<a class="current" title="Writing A Plugin" href="https://jirwin.github.io/quadlek/writing-a-plugin/">
+	
+	Writing A Plugin
+</a>
+
+
+<ul id="scrollspy">
+</ul>
+
+
+  
+</li>
+
+
+
+<li>
+  
+    
+
+
+
+<a  title="Building" href="https://jirwin.github.io/quadlek/building/">
+	
+	Building
+</a>
+
+
+
+  
+</li>
+
+
+        </ul>
+        
+
+        
+        <hr>
+        <span class="section">The author</span>
+        
+        <ul>
+          
+          <li>
+            <a href="https://twitter.com/jirwin" target="_blank" title="@jirwin on Twitter">
+              @jirwin on Twitter
+            </a>
+          </li>
+          
+
+          
+          <li>
+            <a href="https://github.com/jirwin" target="_blank" title="@jirwin on GitHub">
+              @jirwin on GitHub
+            </a>
+          </li>
+          
+
+          
+        </ul>
+        
+      </div>
+    </div>
+  </div>
+</nav>
+
+	</div>
+
+	<article class="article">
+		<div class="wrapper">
+			<h1>Writing a Plugin </h1>
+
+			
+
+<p>Now that we&rsquo;ve gotten a grasp of the <a href="https://jirwin.github.io/quadlek/basics/">basics</a>, we&rsquo;re ready to write our own plugin! As an
+example we&rsquo;ll be building a simple echo plugin that touches each of the plugin components.</p>
+
+<p>We&rsquo;ll get started by creating a new Go package called <code>echo</code> and importing the Quadlek library.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">echo</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;github.com/jirwin/quadlek/quadlek&#34;</span>
+)</code></pre></div>
+<p>At the high level, all Quadlek needs from a plugin is a <code>quadlek.Plugin</code>. How we create this is up to us, but Quadlek
+provides a helper function <code>quadlek.MakePlugin()</code> to make this easy.</p>
+
+<p>It is a common practice for our plugin to have a function named <code>Register()</code> that calls <code>quadlek.MakePlugin()</code>. This
+function can be called anything, but being consistent makes it easier for the users of our plugin.</p>
+
+<p>Lets add a function to our file that uses this. It won&rsquo;t actually do anything yet, but we&rsquo;ll get there.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Register</span>() <span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Plugin</span> {
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">MakePlugin</span>(
+		<span style="color:#e6db74">&#34;echo-plugin&#34;</span>, <span style="color:#75715e">// Plugin ID
+</span><span style="color:#75715e"></span>		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Command</span>{},
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Hook</span>{},
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">ReactionHook</span>{},
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Webhook</span>{},
+		<span style="color:#66d9ef">nil</span>, <span style="color:#75715e">// Load Function,
+</span><span style="color:#75715e"></span>	)
+}</code></pre></div>
+<p>Looking more closely at this, we can see that <code>quadlek.MakePlugin()</code> takes a plugin ID, a slice of each plugin
+component, and the plugin&rsquo;s load function. With these, we can provide Quadlek with everything it needs to know to run
+our plugin! The plugin ID is a unique identifier for the plugin that should be unique across the set of plugins that
+our bot uses. Quadlek uses this ID to namespace storage for our plugin and route custom webhooks properly.</p>
+
+<p>You&rsquo;ll notice that we provided empty slices for the other arguments. These are placeholders for now until we write all
+of the code for our plugin.</p>
+
+<h2 id="slash-commands">Slash Commands</h2>
+
+<p>Lets try writing a handler for our <code>echo</code> slash command:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">echoCommand</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">cmdChannel</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">CommandMsg</span>) {
+	<span style="color:#66d9ef">for</span> {
+		<span style="color:#66d9ef">select</span> {
+		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">cmdMsg</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">cmdChannel</span>:
+			<span style="color:#a6e22e">cmdMsg</span>.<span style="color:#a6e22e">Command</span>.<span style="color:#a6e22e">Reply</span>() <span style="color:#f92672">&lt;-</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">CommandResp</span>{
+				<span style="color:#a6e22e">Text</span>: <span style="color:#a6e22e">cmdMsg</span>.<span style="color:#a6e22e">Command</span>.<span style="color:#a6e22e">Text</span>,
+			}
+			
+		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">ctx</span>.<span style="color:#a6e22e">Done</span>():
+			<span style="color:#66d9ef">return</span>
+		}
+	}
+}</code></pre></div>
+<p>Looking at the arguments for our function, you&rsquo;ll notice that it expects a <code>ctx</code> and <code>cmdChannel</code>. This is the required
+prototype for any Quadlek slash command, and is similar to what functions look like for other components. <code>ctx</code> will be
+cancelled if the bot is shut down, allowing us to gracefully tear down our plugin if required. <code>cmdChannel</code> is a channel
+that we can read <code>*quadlek.CommandMsg</code> objects off of. Any time a user invokes our slash command from slack, Quadlek
+will write <code>*quadlek.CommandMsg</code> to this channel.</p>
+
+<p>The meat of our slash command is just reading from the channel and processing the event until the context is complete.
+Since this is a simple echo command, we just want have the bot respond to the command with the text that was sent with
+the command. We do this by writing a <code>*quadlek.CommandResp</code> into the channel that is returned by <code>cmdMsg.Command.Reply()</code>.
+When you write something to this channel, Quadlek responds to the slash command&rsquo;s webhook with the text of the message
+to send.</p>
+
+<p>By default, command responses are ephemeral messages. In Slack world, this means that only the user that executed the
+command can see the result. If we wanted this message to appear in the channel the user executed the command in, we
+just need to set the <code>InChannel</code> field on the <code>quadlek.CommandResp</code> struct to <code>true</code>.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">cmdMsg</span>.<span style="color:#a6e22e">Command</span>.<span style="color:#a6e22e">Reply</span>() <span style="color:#f92672">&lt;-</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">CommandResp</span>{
+    <span style="color:#a6e22e">Text</span>: <span style="color:#a6e22e">cmdMsg</span>.<span style="color:#a6e22e">Command</span>.<span style="color:#a6e22e">Text</span>,
+    <span style="color:#a6e22e">InChannel</span>: <span style="color:#66d9ef">true</span>,
+}</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title"></p>
+<p>Read more about what other options are available for <code>quadlek.CommandResp</code> in the
+<a href="https://godoc.org/github.com/jirwin/quadlek/quadlek#CommandResp">reference docs</a>.</p>
+</div>
+
+<p>Now that we have written our slash command handler, we can add it to our register plugin.</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Register</span>() <span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Plugin</span> {
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">MakePlugin</span>(
+		<span style="color:#e6db74">&#34;echo-plugin&#34;</span>,
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Command</span>{<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">MakeCommand</span>(<span style="color:#e6db74">&#34;echo&#34;</span>, <span style="color:#a6e22e">echoCommand</span>)},
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Hook</span>{},
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">ReactionHook</span>{},
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Webhook</span>{},
+		<span style="color:#66d9ef">nil</span>,
+	)
+}</code></pre></div>
+<p>Because our function clearly does not implement the <code>quadlek.Command</code> interface, we use the helper function
+<code>quadlek.MakeCommand()</code> to create a <code>quadlek.Command</code> that executes our function. The helper also takes the name of the
+command. It is very important that this name matches with the slash command that is configured with Slack, otherwise the
+slash command webhook won&rsquo;t be routed to our plugin properly.</p>
+
+<p>All together our plugin now looks like this:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">package</span> <span style="color:#a6e22e">echo</span>
+
+<span style="color:#f92672">import</span> (
+	<span style="color:#e6db74">&#34;github.com/jirwin/quadlek/quadlek&#34;</span>
+)
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">echoCommand</span>(<span style="color:#a6e22e">ctx</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Context</span>, <span style="color:#a6e22e">cmdChannel</span> <span style="color:#f92672">&lt;-</span><span style="color:#66d9ef">chan</span> <span style="color:#f92672">*</span><span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">CommandMsg</span>) {
+	<span style="color:#66d9ef">for</span> {
+		<span style="color:#66d9ef">select</span> {
+		<span style="color:#66d9ef">case</span> <span style="color:#a6e22e">cmdMsg</span> <span style="color:#f92672">:=</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">cmdChannel</span>:
+			<span style="color:#a6e22e">cmdMsg</span>.<span style="color:#a6e22e">Command</span>.<span style="color:#a6e22e">Reply</span>() <span style="color:#f92672">&lt;-</span> <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">CommandResp</span>{
+				<span style="color:#a6e22e">Text</span>: <span style="color:#a6e22e">cmdMsg</span>.<span style="color:#a6e22e">Command</span>.<span style="color:#a6e22e">Text</span>,
+			}
+			
+		<span style="color:#66d9ef">case</span> <span style="color:#f92672">&lt;-</span><span style="color:#a6e22e">ctx</span>.<span style="color:#a6e22e">Done</span>():
+			<span style="color:#66d9ef">return</span>
+		}
+	}
+}
+
+<span style="color:#66d9ef">func</span> <span style="color:#a6e22e">Register</span>() <span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Plugin</span> {
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">MakePlugin</span>(
+		<span style="color:#e6db74">&#34;echo-plugin&#34;</span>,
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Command</span>{<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">MakeCommand</span>(<span style="color:#e6db74">&#34;echo&#34;</span>, <span style="color:#a6e22e">echoCommand</span>)},
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Hook</span>{},
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">ReactionHook</span>{},
+		[]<span style="color:#a6e22e">quadlek</span>.<span style="color:#a6e22e">Webhook</span>{},
+		<span style="color:#66d9ef">nil</span>,
+	)
+}</code></pre></div>
+<p>And voila! You&rsquo;ve written your first plugin for Quadlek.
+If you want to get straight to the action, learn how to <a href="https://jirwin.github.io/quadlek/building/">build your bot</a>.</p>
+
+<p>Next we will learn how to add a hook to our echo plugin.</p>
+
+<h2 id="hooks">Hooks</h2>
+
+<p>TODO</p>
+
+
+			<aside class="copyright" role="note">
+				
+				&copy; 2018 Released under the Apache v2 license &ndash;
+				
+				Documentation built with
+				<a href="https://www.gohugo.io" target="_blank">Hugo</a>
+				using the
+				<a href="http://github.com/digitalcraftsman/hugo-material-docs" target="_blank">Material</a> theme.
+			</aside>
+
+			<footer class="footer">
+				
+
+<nav class="pagination" aria-label="Footer">
+  <div class="previous">
+  
+      <a href="https://jirwin.github.io/quadlek/basics/" title="Basics">
+        <span class="direction">
+          Previous
+        </span>
+        <div class="page">
+          <div class="button button-previous" role="button" aria-label="Previous">
+            <i class="icon icon-back"></i>
+          </div>
+          <div class="stretch">
+            <div class="title">
+              Basics
+            </div>
+          </div>
+        </div>
+      </a>
+  
+  </div>
+
+  <div class="next">
+  
+      <a href="https://jirwin.github.io/quadlek/building/" title="Building">
+        <span class="direction">
+          Next
+        </span>
+        <div class="page">
+          <div class="stretch">
+            <div class="title">
+              Building
+            </div>
+          </div>
+          <div class="button button-next" role="button" aria-label="Next">
+            <i class="icon icon-forward"></i>
+          </div>
+        </div>
+      </a>
+  
+  </div>
+</nav>
+
+
+
+
+
+			</footer>
+		</div>
+	</article>
+
+	<div class="results" role="status" aria-live="polite">
+		<div class="scrollable">
+			<div class="wrapper">
+				<div class="meta"></div>
+				<div class="list"></div>
+			</div>
+		</div>
+	</div>
+</main>
+
+    <script>
+    
+      var base_url = 'https:\/\/jirwin.github.io\/quadlek\/';
+      var repo_id  = 'jirwin\/quadlek';
+    
+    </script>
+
+    <script src="https://jirwin.github.io/quadlek/javascripts/application.js"></script>
+    
+
+    <script>
+      /* Add headers to scrollspy */
+      var headers   = document.getElementsByTagName("h2");
+      var scrollspy = document.getElementById('scrollspy');
+
+      if(scrollspy) {
+        if(headers.length > 0) {
+          for(var i = 0; i < headers.length; i++) {
+            var li = document.createElement("li");
+            li.setAttribute("class", "anchor");
+
+            var a  = document.createElement("a");
+            a.setAttribute("href", "#" + headers[i].id);
+            a.setAttribute("title", headers[i].innerHTML);
+            a.innerHTML = headers[i].innerHTML;
+
+            li.appendChild(a)
+            scrollspy.appendChild(li);
+          }
+        } else {
+          scrollspy.parentElement.removeChild(scrollspy)
+        }
+
+
+        /* Add permanent link next to the headers */
+        var headers = document.querySelectorAll("h1, h2, h3, h4, h5, h6");
+
+        for(var i = 0; i < headers.length; i++) {
+            var a = document.createElement("a");
+            a.setAttribute("class", "headerlink");
+            a.setAttribute("href", "#" + headers[i].id);
+            a.setAttribute("title", "Permanent link")
+            a.innerHTML = "#";
+            headers[i].appendChild(a);
+        }
+      }
+    </script>
+
+    
+
+  </body>
+</html>
+

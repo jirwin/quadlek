@@ -17,9 +17,29 @@
       <pubDate>Thu, 23 Aug 2018 01:45:39 -0700</pubDate>
       
       <guid>https://jirwin.github.io/quadlek/basics/</guid>
-      <description>While using Quadlek to build your Slack bot is meant to be straightforward, understanding the basics will go a long ways to helping you accomplish your goals.
+      <description>Using Quadlek to build your Slack bot is meant to be straightforward, but understanding the basics will go a long ways to helping you accomplish your goals.
 Quadlek is built with the fantastic nlopes/slack client. If you run into trouble, or just want to learn more about what you can do I recommend reading their docs.
-Slack API The Slack API is split into two parts: the web API, and the RTM(real time messaging) API.</description>
+Slack API The Slack API is split into two parts: the web API, and the RTM (real time messaging) API.</description>
+    </item>
+    
+    <item>
+      <title>Writing a Plugin</title>
+      <link>https://jirwin.github.io/quadlek/writing-a-plugin/</link>
+      <pubDate>Fri, 24 Aug 2018 00:41:49 -0700</pubDate>
+      
+      <guid>https://jirwin.github.io/quadlek/writing-a-plugin/</guid>
+      <description>Now that we&amp;rsquo;ve gotten a grasp of the basics, we&amp;rsquo;re ready to write our own plugin! As an example we&amp;rsquo;ll be building a simple echo plugin that touches each of the plugin components.
+We&amp;rsquo;ll get started by creating a new Go package called echo and importing the Quadlek library.
+package echo import ( &amp;#34;github.com/jirwin/quadlek/quadlek&amp;#34; ) At the high level, all Quadlek needs from a plugin is a quadlek.Plugin. How we create this is up to us, but Quadlek provides a helper function quadlek.</description>
+    </item>
+    
+    <item>
+      <title>Building</title>
+      <link>https://jirwin.github.io/quadlek/building/</link>
+      <pubDate>Fri, 24 Aug 2018 02:26:55 -0700</pubDate>
+      
+      <guid>https://jirwin.github.io/quadlek/building/</guid>
+      <description>TODO</description>
     </item>
     
   </channel>

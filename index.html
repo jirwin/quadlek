@@ -50,7 +50,6 @@
     <link rel="stylesheet" href="https://jirwin.github.io/quadlek/stylesheets/application.css">
     <link rel="stylesheet" href="https://jirwin.github.io/quadlek/stylesheets/temporary.css">
     <link rel="stylesheet" href="https://jirwin.github.io/quadlek/stylesheets/palettes.css">
-    <link rel="stylesheet" href="https://jirwin.github.io/quadlek/stylesheets/highlight/highlight.css">
 
     
     
@@ -100,7 +99,7 @@
     </div>
     <div class="stretch">
       <div class="title">
-        Quadlek: a customizable Slack bot framework
+        Quadlek: a Slack bot framework written in Go
       </div>
     </div>
 
@@ -188,9 +187,9 @@
 
 
 
-<a class="current" title="Home" href="https://jirwin.github.io/quadlek/">
+<a class="current" title="Getting Started" href="https://jirwin.github.io/quadlek/">
 	
-	Home
+	Getting Started
 </a>
 
 
@@ -212,6 +211,42 @@
 <a  title="Basics" href="https://jirwin.github.io/quadlek/basics/">
 	
 	Basics
+</a>
+
+
+
+  
+</li>
+
+
+
+<li>
+  
+    
+
+
+
+<a  title="Writing A Plugin" href="https://jirwin.github.io/quadlek/writing-a-plugin/">
+	
+	Writing A Plugin
+</a>
+
+
+
+  
+</li>
+
+
+
+<li>
+  
+    
+
+
+
+<a  title="Building" href="https://jirwin.github.io/quadlek/building/">
+	
+	Building
 </a>
 
 
@@ -263,19 +298,19 @@
 
 <p>Quadlek is a framework written in <a href="https://golang.org">Go</a> for creating a <a href="https://slack.com">Slack</a> bot that can do your bidding.
 It is stable, highly concurrent, and customizable via an easy to use plugin interface. Using quadlek, you can
-easily enable your users to increase(or decrease) productivity with chatops and other fun.</p>
+easily enable your users to increase (or decrease) productivity with chat-ops and other fun.</p>
 
 <p>Quadlek ships with a number of plugins including:</p>
 
 <ul>
 <li>karma - Let users give or take points to other users</li>
-<li>Github - Create, view, and comment on Github issues</li>
+<li>github - Create, view, and comment on Github issues</li>
 <li>random - Roll dice, choose from a list of options</li>
-<li>Spotify - Lets users share what they are listening to and can store any songs linked to into a public shared playlist</li>
-<li>Twitter - Automatically publish tweets for tracking news, service status updates, etc</li>
+<li>spotify - Lets users share what they are listening to and can store any songs linked to into a public shared playlist</li>
+<li>twitter - Automatically publish tweets for tracking news, service status updates, etc</li>
 </ul>
 
-<p>Some other plugins that have been developed for Quadlek:</p>
+<p>Some other plugins that have been developed for Quadlek include:</p>
 
 <ul>
 <li>comics - Generate a comic based on recent chat and upload it to Imgur</li>
@@ -286,10 +321,7 @@ easily enable your users to increase(or decrease) productivity with chatops and 
 <h2 id="installation">Installation</h2>
 
 <p>To begin using Quadlek to build your new Slack bot, you&rsquo;ll need to install the library to your Go path:</p>
-
-<pre><code class="language-bash">$ go get -u github.com/jirwin/quadlek/quadlek
-</code></pre>
-
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">go get -u github.com/jirwin/quadlek/quadlek</code></pre></div>
 <h2 id="license">License</h2>
 
 <p>Quadlek is licensed under the Apache v2 license.</p>
@@ -310,6 +342,31 @@ easily enable your users to increase(or decrease) productivity with chatops and 
 				
 
 
+
+<nav class="pagination" aria-label="Footer">
+  <div class="previous">
+  </div>
+
+  
+  
+  <div class="next">
+      <a href="https://jirwin.github.io/quadlek/basics/" title="Basics">
+        <span class="direction">
+          Next
+        </span>
+        <div class="page">
+          <div class="stretch">
+            <div class="title">
+              Basics
+            </div>
+          </div>
+          <div class="button button-next" role="button" aria-label="Next">
+            <i class="icon icon-forward"></i>
+          </div>
+        </div>
+      </a>
+  </div>
+</nav>
 
 
 
@@ -377,8 +434,6 @@ easily enable your users to increase(or decrease) productivity with chatops and 
 
     
 
-    <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.8.0/highlight.min.js"></script>
-    <script>hljs.initHighlightingOnLoad();</script>
   </body>
 </html>
 
