@@ -173,9 +173,11 @@ type Webhook interface {
 
 // WebhookMsg is the struct that is sent to the plugin's channel
 type WebhookMsg struct {
-	Bot     *Bot
-	Request *http.Request
-	Store   *Store
+	Bot            *Bot
+	Request        *http.Request
+	ResponseWriter http.ResponseWriter
+	Store          *Store
+	Done           chan bool
 }
 
 // registeredWebhook is the internal struct that represents a registered webhook
@@ -428,9 +430,10 @@ func (b *Bot) dispatchWebhook(webhook *PluginWebhook) {
 	}
 
 	wh.Webhook.Channel() <- &WebhookMsg{
-		Bot:     b,
-		Request: webhook.Request,
-		Store:   b.getStore(wh.PluginId),
+		Bot:            b,
+		Request:        webhook.Request,
+		ResponseWriter: webhook.ResponseWriter,
+		Store:          b.getStore(wh.PluginId),
 	}
 }
 

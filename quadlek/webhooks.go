@@ -15,8 +15,9 @@ var decoder = schema.NewDecoder()
 
 // PluginWebhook stores an incoming web request to be passed to a plugin
 type PluginWebhook struct {
-	Name    string
-	Request *http.Request
+	Name           string
+	Request        *http.Request
+	ResponseWriter http.ResponseWriter
 }
 
 // slashCommand is an internal object that parses slash command webhooks coming from the Slack servers
@@ -127,13 +128,28 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 // handlePluginWebhook is an http handler that dispatches custom webhooks to the appropriate plugin
 func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	b.pluginWebhookChannel <- &PluginWebhook{
-		Name:    vars["webhook-name"],
-		Request: r,
+
+	wh := b.GetWebhook(vars["webhook-name"])
+	if wh == nil {
+		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte{})
+	done := make(chan bool, 1)
+	msg := &WebhookMsg{
+		Bot:            b,
+		Request:        r,
+		ResponseWriter: w,
+		Store:          b.getStore(wh.PluginId),
+		Done:           done,
+	}
+	wh.Webhook.Channel() <- msg
+
+	select {
+	case <-done:
+		log.Info("Webhook completed.")
+	case <-time.After(time.Second * 5):
+		log.Info("Webhook timed out.")
+	}
 }
 
 // WebhookServer starts a new http server that listens and responds to incoming webhooks.
@@ -143,7 +159,7 @@ func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 func (b *Bot) WebhookServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/slack/command", b.handleSlackCommand).Methods("POST")
-	r.HandleFunc("/slack/plugin/{webhook-name}", b.handlePluginWebhook).Methods("GET")
+	r.HandleFunc("/slack/plugin/{webhook-name}", b.handlePluginWebhook).Methods("GET", "POST", "DELETE", "PUT")
 
 	// TODO(jirwin): This listen address should be configurable
 	srv := &http.Server{Addr: ":8000", Handler: r}
