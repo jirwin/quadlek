@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 
 	"time"
@@ -181,6 +182,12 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 	for {
 		select {
 		case whMsg := <-whChannel:
+			// respond to webhook
+			whMsg.ResponseWriter.WriteHeader(http.StatusOK)
+			whMsg.ResponseWriter.Write([]byte{})
+			whMsg.Done <- true
+
+			// process webhook
 			query := whMsg.Request.URL.Query()
 			stateId, ok := query["state"]
 			whMsg.Request.Body.Close()

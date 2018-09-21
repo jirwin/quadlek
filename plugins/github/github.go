@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"reflect"
@@ -226,6 +227,12 @@ func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webho
 	for {
 		select {
 		case whMsg := <-whChannel:
+			// respond to webhook
+			whMsg.ResponseWriter.WriteHeader(http.StatusOK)
+			whMsg.ResponseWriter.Write([]byte{})
+			whMsg.Done <- true
+
+			// process webhook
 			state := whMsg.Request.FormValue("state")
 			whMsg.Request.Body.Close()
 
