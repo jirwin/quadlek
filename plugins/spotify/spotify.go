@@ -15,9 +15,9 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
-	"github.com/gofrs/go.uuid"
 	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/quadlek/quadlek"
+	"github.com/satori/go.uuid"
 	"github.com/zmb3/spotify"
 	"golang.org/x/oauth2"
 )
