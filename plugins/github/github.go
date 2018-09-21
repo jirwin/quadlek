@@ -15,10 +15,10 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
-	"github.com/gofrs/go.uuid"
 	"github.com/golang/protobuf/proto"
 	"github.com/google/go-github/github"
 	"github.com/jirwin/quadlek/quadlek"
+	"github.com/satori/go.uuid"
 	"golang.org/x/oauth2"
 	githuboauth "golang.org/x/oauth2/github"
 )
