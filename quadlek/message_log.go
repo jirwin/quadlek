@@ -60,3 +60,21 @@ func (b *Bot) GetMessageLog(channel string, opts MessageLotOpts) ([]slack.Messag
 
 	return msgs, nil
 }
+
+func (b *Bot) GetMessage(channel, ts string) (slack.Message, error) {
+	params := slack.NewHistoryParameters()
+	params.Count = 1
+	params.Latest = ts
+	params.Inclusive = true
+
+	history, err := b.api.GetChannelHistory(channel, params)
+	if err != nil {
+		return slack.Message{}, err
+	}
+
+	if len(history.Messages) != 1 {
+		return slack.Message{}, err
+	}
+
+	return history.Messages[0], nil
+}
