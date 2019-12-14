@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"context"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/jirwin/quadlek/quadlek"
 )
 
@@ -36,17 +37,14 @@ func scoreCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 				return nil
 			})
 			if err != nil {
-				log.WithFields(log.Fields{
-					"err":  err,
-					"text": cmdMsg.Command.Text,
-				}).Error("unable to get score")
+				zap.L().Error("unable to get score", zap.Error(err))
 				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 					Text: fmt.Sprintf("Unable to fetch score for %s", cmdMsg.Command.Text),
 				})
 			}
 
 		case <-ctx.Done():
-			log.Info("Exiting KarmaScoreCommand.")
+			zap.L().Info("Exiting KarmaScoreCommand.")
 			return
 		}
 	}
@@ -83,9 +81,7 @@ func karmaHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
 						return []byte(karmaStr), nil
 					})
 					if err != nil {
-						log.WithFields(log.Fields{
-							"err": err,
-						}).Errorf("Error incrementing value: %s", t)
+						zap.L().Error("Error incrementing value", zap.String("token", t), zap.Error(err))
 					}
 				}
 
@@ -108,15 +104,13 @@ func karmaHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
 						return []byte(karmaStr), nil
 					})
 					if err != nil {
-						log.WithFields(log.Fields{
-							"err": err,
-						}).Errorf("Error decrementing value: %s", t)
+						zap.L().Error("Error decrementing value: %s", zap.String("token", t), zap.Error(err))
 					}
 				}
 			}
 
 		case <-ctx.Done():
-			log.Info("Exiting Karma Hook.")
+			zap.L().Info("Exiting Karma Hook.")
 			return
 		}
 	}

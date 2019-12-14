@@ -9,15 +9,16 @@ import (
 	"net/http"
 	"reflect"
 
+	"go.uber.org/zap"
+
 	"time"
 
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
 	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/quadlek/quadlek"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"github.com/zmb3/spotify"
 	"golang.org/x/oauth2"
 )
@@ -78,10 +79,8 @@ func getSpotifyClient(authToken *AuthToken) (spotify.Client, bool) {
 }
 
 func authFlow(cmdMsg *quadlek.CommandMsg, bkt *bolt.Bucket) error {
-	uuid, err := uuid.NewV4()
-	if err != nil {
-		return err
-	}
+	uuid := uuid.NewV4()
+
 	stateId := uuid.String()
 	authUrl := startAuthFlow(stateId)
 
@@ -94,9 +93,7 @@ func authFlow(cmdMsg *quadlek.CommandMsg, bkt *bolt.Bucket) error {
 
 	authStateBytes, err := proto.Marshal(authState)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("error marshalling auth state")
+		zap.L().Error("error marshalling auth state", zap.Error(err))
 		return err
 	}
 
@@ -123,18 +120,14 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 				authTokenBytes := bkt.Get([]byte("authtoken-" + cmdMsg.Command.UserId))
 				err := proto.Unmarshal(authTokenBytes, authToken)
 				if err != nil {
-					log.WithFields(log.Fields{
-						"err": err,
-					}).Error("error unmarshalling auth token")
+					zap.L().Error("error unmarshalling auth token", zap.Error(err))
 					return err
 				}
 
 				if authToken.Token == nil {
 					err = authFlow(cmdMsg, bkt)
 					if err != nil {
-						log.WithFields(log.Fields{
-							"err": err,
-						}).Error("error during auth flow")
+						zap.L().Error("error during auth flow", zap.Error(err))
 						return err
 					}
 					return nil
@@ -154,9 +147,7 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 					cmdMsg.Command.Reply() <- &quadlek.CommandResp{
 						Text: "Unable to get currently playing.",
 					}
-					log.WithFields(log.Fields{
-						"err": err,
-					}).Error("error getting currently playing.")
+					zap.L().Error("error getting currently playing.", zap.Error(err))
 					return err
 				}
 
@@ -172,7 +163,7 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			}
 
 		case <-ctx.Done():
-			log.Info("Exiting NowPlayingCommand.")
+			zap.L().Info("Exiting NowPlayingCommand.")
 			return
 		}
 	}
@@ -192,9 +183,7 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 			stateId, ok := query["state"]
 			whMsg.Request.Body.Close()
 			if !ok {
-				log.WithFields(log.Fields{
-					"url": whMsg.Request.URL.String(),
-				}).Error("invalid callback url")
+				zap.L().Error("invalid callback url")
 				continue
 			}
 
@@ -237,7 +226,7 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 						Text: "Sorry! There was an error logging you into Spotify.",
 					})
-					log.Error("error storing auth token.")
+					zap.L().Error("error storing auth token.")
 					return err
 				}
 
@@ -248,14 +237,12 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 				return nil
 			})
 			if err != nil {
-				log.WithFields(log.Fields{
-					"err": err,
-				}).Error("error authenticating to spotify")
+				zap.L().Error("error authenticating to spotify", zap.Error(err))
 				continue
 			}
 
 		case <-ctx.Done():
-			log.Info("Exiting spotify authorize command")
+			zap.L().Info("Exiting spotify authorize command")
 			return
 		}
 	}

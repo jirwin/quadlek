@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"context"
 
 	"bytes"
 	"encoding/json"
 	"net/http"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/nlopes/slack"
 )
 
@@ -476,9 +477,7 @@ func (b *Bot) RespondToSlashCommand(url string, cmdResp *CommandResp) error {
 
 	jsonBytes, err := json.Marshal(cmdResp)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("error marshalling json.")
+		b.Log.Error("error marshalling json.", zap.Error(err))
 		return err
 	}
 	data := bytes.NewBuffer(jsonBytes)
@@ -486,9 +485,7 @@ func (b *Bot) RespondToSlashCommand(url string, cmdResp *CommandResp) error {
 	resp, err := http.Post(url, "application/json", data)
 	defer resp.Body.Close()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("error responding to slash command.")
+		b.Log.Error("error responding to slash command.", zap.Error(err))
 		return err
 	}
 	return nil

@@ -9,16 +9,17 @@ import (
 	"net/http"
 	"time"
 
+	"go.uber.org/zap"
+
 	"reflect"
 
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
 	"github.com/golang/protobuf/proto"
 	"github.com/google/go-github/github"
 	"github.com/jirwin/quadlek/quadlek"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/oauth2"
 	githuboauth "golang.org/x/oauth2/github"
 )
@@ -75,9 +76,7 @@ func authFlow(cmdMsg *quadlek.CommandMsg, bkt *bolt.Bucket) error {
 
 	authStateBytes, err := proto.Marshal(authState)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("error marshalling auth state")
+		zap.L().Error("error marshalling auth state", zap.Error(err))
 		return err
 	}
 
@@ -107,9 +106,7 @@ func getGithubClient(ctx context.Context, authToken *AuthToken) (*github.Client,
 
 	_, _, err := client.Users.ListEmails(ctx, nil)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err.Error(),
-		}).Error("User doesn't seem to be authenticated.")
+		zap.L().Error("User doesn't seem to be authenticated.", zap.Error(err))
 		return nil, true
 	}
 
@@ -159,18 +156,14 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 				authTokenBytes := bkt.Get([]byte("authtoken-" + cmdMsg.Command.UserId))
 				err := proto.Unmarshal(authTokenBytes, authToken)
 				if err != nil {
-					log.WithFields(log.Fields{
-						"err": err,
-					}).Error("error unmarshalling auth token")
+					zap.L().Error("error unmarshalling auth token", zap.Error(err))
 					return err
 				}
 
 				if authToken.Token == nil {
 					err = authFlow(cmdMsg, bkt)
 					if err != nil {
-						log.WithFields(log.Fields{
-							"err": err,
-						}).Error("error during auth flow")
+						zap.L().Error("error during auth flow", zap.Error(err))
 						return err
 					}
 					return nil
@@ -179,7 +172,7 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 				if authToken.GithubUser == "" {
 					err = authFlow(cmdMsg, bkt)
 					if err != nil {
-						log.WithError(err).Error("error during authflow")
+						zap.L().Error("error during authflow", zap.Error(err))
 						return err
 					}
 					return nil
@@ -200,7 +193,7 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 					Body:  &body,
 				})
 				if err != nil {
-					log.WithError(err).Error("Error creating issue.")
+					zap.L().Error("Error creating issue.", zap.Error(err))
 					return err
 				}
 
@@ -217,7 +210,7 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			}
 
 		case <-ctx.Done():
-			log.Info("Exiting github command")
+			zap.L().Info("Exiting github command")
 			return
 		}
 	}
@@ -257,7 +250,7 @@ func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webho
 				}
 
 				if state != authState.Id {
-					log.Errorf("invalid oauth state, expected '%s', got '%s'\n", authState.Id, state)
+					zap.L().Error("invalid oauth state", zap.String("expected", authState.Id), zap.String("actual", state))
 					return errors.New("received invalid oauth state")
 				}
 
@@ -266,7 +259,7 @@ func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webho
 				code := whMsg.Request.FormValue("code")
 				token, err := oauthConfig.Exchange(ctx, code)
 				if err != nil {
-					log.WithError(err).Error("oauth exchange failed")
+					zap.L().Error("oauth exchange failed", zap.Error(err))
 					return err
 				}
 
@@ -274,7 +267,7 @@ func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webho
 				client := github.NewClient(oauthClient)
 				user, _, err := client.Users.Get(ctx, "")
 				if err != nil {
-					log.WithError(err).Error("failed to get user")
+					zap.L().Error("failed to get user", zap.Error(err))
 					return err
 				}
 
@@ -289,7 +282,7 @@ func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webho
 					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 						Text: "Sorry! There was an error logging you into Github.",
 					})
-					log.Error("error storing auth token.")
+					zap.L().Error("error storing auth token.", zap.Error(err))
 					return err
 				}
 
@@ -300,14 +293,12 @@ func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webho
 				return nil
 			})
 			if err != nil {
-				log.WithFields(log.Fields{
-					"err": err,
-				}).Error("error authenticating to github")
+				zap.L().Error("error authenticating to github", zap.Error(err))
 				continue
 			}
 
 		case <-ctx.Done():
-			log.Info("Exiting github authorize command")
+			zap.L().Info("Exiting github authorize command")
 			return
 		}
 	}

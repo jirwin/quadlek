@@ -5,6 +5,8 @@ package comics
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	"fmt"
 	"strings"
 
@@ -14,7 +16,6 @@ import (
 
 	"html"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/comics/src/comics"
 	"github.com/jirwin/quadlek/quadlek"
@@ -254,7 +255,7 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			})
 
 		case <-ctx.Done():
-			log.Info("Exiting comic command.")
+			zap.L().Info("Exiting comic command.")
 			return
 		}
 	}

@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	"go.uber.org/zap"
+
 	"context"
 
 	"sync"
@@ -19,14 +21,13 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/nlopes/slack"
-
-	log "github.com/Sirupsen/logrus"
 )
 
 // This is the core struct for the Bot, and provides all methods required for interacting with various Slack APIs.
 //
 // An instance of the bot is provided to plugins to enable plugins to interact with the Slack API.
 type Bot struct {
+	Log                  *zap.Logger
 	apiKey               string
 	verificationToken    string
 	api                  *slack.Client
@@ -154,7 +155,7 @@ func (b *Bot) handleEvents() {
 				b.userId = ev.Info.User.ID
 				channels, err := b.api.GetChannels(true)
 				if err != nil {
-					log.WithError(err).Error("Unable to list channels")
+					b.Log.Error("Unable to list channels", zap.Error(err))
 					continue
 				}
 				for _, channel := range channels {
@@ -164,7 +165,7 @@ func (b *Bot) handleEvents() {
 
 				users, err := b.api.GetUsers()
 				if err != nil {
-					log.WithError(err).Error("Unable to list users")
+					b.Log.Error("Unable to list users", zap.Error(err))
 					continue
 				}
 				for _, user := range users {
@@ -193,7 +194,7 @@ func (b *Bot) handleEvents() {
 				if ev.Channel.IsChannel {
 					channel, err := b.api.GetChannelInfo(ev.Channel.ID)
 					if err != nil {
-						log.WithError(err).Error("Unable to add channel")
+						b.Log.Error("Unable to add channel", zap.Error(err))
 						continue
 					}
 					b.humanChannels[channel.Name] = *channel
@@ -282,7 +283,13 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 		return nil, err
 	}
 
+	log, err := zap.NewProduction()
+	if err != nil {
+		return nil, err
+	}
+
 	return &Bot{
+		Log:                  log,
 		ctx:                  ctx,
 		cancel:               cancel,
 		apiKey:               apiKey,

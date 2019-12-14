@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"go.uber.org/zap"
+
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 )
@@ -69,9 +70,7 @@ func generateErrorMsg(w http.ResponseWriter, msg string) {
 func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("error parsing form. Invalid slack command hook.")
+		b.Log.Error("error parsing form. Invalid slack command hook.", zap.Error(err))
 		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
 		return
 	}
@@ -80,15 +79,13 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 	decoder.IgnoreUnknownKeys(true)
 	err = decoder.Decode(cmd, r.PostForm)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("error marshalling slack command.")
+		b.Log.Error("error marshalling slack command.", zap.Error(err))
 		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
 		return
 	}
 
 	if cmd.Token != b.verificationToken {
-		log.Error("Invalid validation token was used. Ignoring.")
+		b.Log.Error("Invalid validation token was used. Ignoring.", zap.Error(err))
 		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
 		return
 	}
@@ -146,9 +143,9 @@ func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 
 	select {
 	case <-done:
-		log.Info("Webhook completed.")
+		b.Log.Info("Webhook completed.")
 	case <-time.After(time.Second * 5):
-		log.Info("Webhook timed out.")
+		b.Log.Info("Webhook timed out.")
 	}
 }
 
@@ -166,15 +163,15 @@ func (b *Bot) WebhookServer() {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
-			log.Printf("listen: %s\n", err)
+			b.Log.Error("listen err", zap.Error(err))
 		}
 	}()
 
 	<-b.ctx.Done()
 
-	log.Info("Shutting down webhook server")
+	b.Log.Info("Shutting down webhook server")
 	// shut down gracefully, but wait no longer than 5 seconds before halting
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	srv.Shutdown(ctx)
-	log.Info("Shut down webhook server")
+	b.Log.Info("Shut down webhook server")
 }

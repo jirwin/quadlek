@@ -3,7 +3,8 @@ package twitter
 import (
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
+	"go.uber.org/zap"
+
 	"github.com/dghubble/go-twitter/twitter"
 	"github.com/dghubble/oauth1"
 	"github.com/jirwin/quadlek/quadlek"
@@ -30,7 +31,7 @@ func load(consumerKey, consumerSecret, accessToken, accessSecret string, filter 
 
 			stream, err := client.Streams.Filter(filterParams)
 			if err != nil {
-				log.WithField("err", err).Error("Error streaming tweets.")
+				zap.L().Error("Error streaming tweets.", zap.Error(err))
 				return
 			}
 
@@ -41,16 +42,16 @@ func load(consumerKey, consumerSecret, accessToken, accessSecret string, filter 
 					case *twitter.Tweet:
 						if channel, ok := filter[m.User.IDStr]; ok {
 							if m.RetweetedStatus != nil {
-								log.WithField("tweet", m).Info("Got a tweet containing a retweet")
+								zap.L().Info("Got a tweet containing a retweet", zap.Any("tweet", m))
 								if replyChannel, ok := filter[m.RetweetedStatus.User.IDStr]; ok && channel == replyChannel {
-									log.WithField("tweet", m).Info("Tweet contains retweet from already monitored account, cancelling message")
+									zap.L().Info("Tweet contains retweet from already monitored account, cancelling message", zap.Any("tweet", m))
 									continue
 								}
 							}
 							twitterUrl := fmt.Sprintf("https://twitter.com/%s/status/%s", m.User.ScreenName, m.IDStr)
 							chanId, err := bot.GetChannelId(channel)
 							if err != nil {
-								log.WithField("err", err).Error("unable to find channel.")
+								zap.L().Error("unable to find channel.", zap.Error(err))
 								continue
 							}
 							bot.Say(chanId, twitterUrl)

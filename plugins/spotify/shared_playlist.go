@@ -3,9 +3,10 @@ package spotify
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	"regexp"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/quadlek/quadlek"
 	"github.com/zmb3/spotify"
@@ -42,23 +43,20 @@ func saveSongsHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
 				}
 
 				if authToken.Token == nil {
-					log.Error("There wasn't a token for the shared playlist user")
+					zap.L().Error("There wasn't a token for the shared playlist user")
 					return nil
 				}
 				client, needsReauth := getSpotifyClient(authToken)
 				if needsReauth {
-					log.Info("detected a song, but need to reauth before it can be added.")
+					zap.L().Info("detected a song, but need to reauth before it can be added.")
 				}
 
-				snapshotId, err := client.AddTracksToPlaylist(sharedPlaylistUsername, sharedPlaylist, tracks...)
+				snapshotId, err := client.AddTracksToPlaylist(sharedPlaylist, tracks...)
 				if err != nil {
-					log.WithFields(log.Fields{
-						"err":    err,
-						"tracks": tracks,
-					}).Error("error adding tracks to shared playlist")
+					zap.L().Error("error adding tracks to shared playlist", zap.Error(err))
 					return err
 				}
-				log.Info("Spotify snapshot id: ", snapshotId)
+				zap.L().Info("Spotify snapshot id", zap.String("snapshotId", snapshotId))
 
 				return nil
 			})
@@ -67,7 +65,7 @@ func saveSongsHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
 			}
 
 		case <-ctx.Done():
-			log.Info("Exiting save song hook")
+			zap.L().Info("Exiting save song hook")
 			return
 		}
 	}

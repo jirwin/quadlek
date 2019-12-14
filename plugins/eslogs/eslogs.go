@@ -3,12 +3,13 @@ package eslogs
 import (
 	"context"
 
+	"go.uber.org/zap"
+
 	"fmt"
 
 	"regexp"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/jirwin/quadlek/quadlek"
 	"gopkg.in/olivere/elastic.v5"
 )
@@ -73,12 +74,12 @@ func logHook(ctx context.Context, hookchan <-chan *quadlek.HookMsg) {
 
 			_, err = esClient.Index().Index(esIndex).Type("slack-msg").Id(hookMsg.Msg.Timestamp).BodyJson(msg).Do(ctx)
 			if err != nil {
-				log.WithError(err).Error("Error indexing log to ES")
+				zap.L().Error("Error indexing log to ES", zap.Error(err))
 				continue
 			}
 
 		case <-ctx.Done():
-			log.Info("Exiting es log hook")
+			zap.L().Info("Exiting es log hook")
 			return
 		}
 	}
