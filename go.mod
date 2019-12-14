@@ -12,10 +12,11 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/gorilla/mux v1.7.3
 	github.com/gorilla/schema v1.1.0
+	github.com/gorilla/websocket v1.4.1 // indirect
 	github.com/jirwin/comics v0.0.0-20180408212830-43822d8acb7c
 	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e // indirect
 	github.com/mattn/go-scan v0.0.0-20161028081550-c32d62d79baf // indirect
-	github.com/nlopes/slack v0.6.0
+	github.com/nlopes/slack v0.3.1-0.20180914164840-763c67d4f458
 	github.com/purdyk/tvdb v0.0.0-20170517053125-80f06ad52285
 	github.com/satori/go.uuid v1.2.0
 	github.com/zmb3/spotify v0.0.0-20191213135453-f2845aa57886
