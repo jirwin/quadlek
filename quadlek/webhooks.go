@@ -1,8 +1,15 @@
 package quadlek
 
 import (
+	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -68,7 +75,13 @@ func generateErrorMsg(w http.ResponseWriter, msg string) {
 // and dispatches it to the proper plugin.
 // It attempts to handle responding to the request if the plugin doesn't respond in time.
 func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
+	err := b.ValidateSlackRequest(r)
+	if err != nil {
+		b.Log.Error("failed validating request signature")
+		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
+		return
+	}
+	err = r.ParseForm()
 	if err != nil {
 		b.Log.Error("error parsing form. Invalid slack command hook.", zap.Error(err))
 		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
@@ -80,12 +93,6 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 	err = decoder.Decode(cmd, r.PostForm)
 	if err != nil {
 		b.Log.Error("error marshalling slack command.", zap.Error(err))
-		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
-		return
-	}
-
-	if cmd.Token != b.verificationToken {
-		b.Log.Error("Invalid validation token was used. Ignoring.", zap.Error(err))
 		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
 		return
 	}
@@ -157,6 +164,7 @@ func (b *Bot) WebhookServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/slack/command", b.handleSlackCommand).Methods("POST")
 	r.HandleFunc("/slack/plugin/{webhook-name}", b.handlePluginWebhook).Methods("GET", "POST", "DELETE", "PUT")
+	r.HandleFunc("/slack/event", b.handleSlackEvent).Methods("POST")
 
 	// TODO(jirwin): This listen address should be configurable
 	srv := &http.Server{Addr: ":8000", Handler: r}
@@ -174,4 +182,33 @@ func (b *Bot) WebhookServer() {
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	srv.Shutdown(ctx)
 	b.Log.Info("Shut down webhook server")
+}
+
+var InvalidRequestSignature = errors.New("invalid request signature")
+
+// Validates the signature header for slack webhooks
+func (b *Bot) ValidateSlackRequest(r *http.Request) error {
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		b.Log.Error("error reading request body")
+		return InvalidRequestSignature
+	}
+
+	rBody := ioutil.NopCloser(bytes.NewBuffer(body))
+	r.Body = rBody
+
+	ts := r.Header.Get("X-Slack-Request-Timestamp")
+	signature := r.Header.Get("X-Slack-Signature")
+
+	msg := fmt.Sprintf("v0:%s:%s", ts, body)
+	key := []byte(b.verificationToken)
+	h := hmac.New(sha256.New, key)
+	h.Write([]byte(msg))
+	checkSign := "v0=" + hex.EncodeToString(h.Sum(nil))
+
+	if signature == checkSign {
+		return nil
+	}
+
+	return errors.New("invalid request signature")
 }

@@ -30,3 +30,4 @@ quadlekBot
 vendor
 Gopkg.lock
 Gopkg.toml
+.sops.yaml

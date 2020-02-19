@@ -1,0 +1,6 @@
+env: dev
+service:
+    name: quadlek
+    type: ClusterIP
+    externalPort: 8000
+    targetPort: 8000

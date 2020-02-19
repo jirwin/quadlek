@@ -24,16 +24,20 @@ func echoCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	}
 }
 
+func echoHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
+	for {
+		select {
+		case hookMsg := <-hookChannel:
+			hookMsg.Bot.Respond(hookMsg.Msg, fmt.Sprintf("echo: %s", hookMsg.Msg.Text))
+		}
+	}
+}
+
 func echoReactionHook(ctx context.Context, reactionChannel <-chan *quadlek.ReactionHookMsg) {
 	for {
 		select {
 		case rh := <-reactionChannel:
-			user, err := rh.Bot.GetUserName(rh.Reaction.User)
-			if err != nil {
-				zap.L().Error("User not found.", zap.Error(err))
-				continue
-			}
-			rh.Bot.Say(rh.Reaction.Item.Channel, fmt.Sprintf("@%s added a reaction! :%s:", user, rh.Reaction.Reaction))
+			rh.Bot.Say(rh.Reaction.Item.Channel, fmt.Sprintf("<@%s> added a reaction! :%s:", rh.Reaction.User, rh.Reaction.Reaction))
 
 		case <-ctx.Done():
 			zap.L().Info("Exiting echo reaction hook")
@@ -46,8 +50,8 @@ func Register() quadlek.Plugin {
 	return quadlek.MakePlugin(
 		"echo",
 		[]quadlek.Command{quadlek.MakeCommand("echo", echoCommand)},
-		nil,
-		nil,
+		[]quadlek.Hook{quadlek.MakeHook(echoHook)},
+		[]quadlek.ReactionHook{quadlek.MakeReactionHook(echoReactionHook)},
 		nil,
 		nil,
 	)

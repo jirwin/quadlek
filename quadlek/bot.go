@@ -31,11 +31,11 @@ type Bot struct {
 	apiKey               string
 	verificationToken    string
 	api                  *slack.Client
-	rtm                  *slack.RTM
 	channels             map[string]slack.Channel
 	humanChannels        map[string]slack.Channel
 	username             string
 	userId               string
+	botId                string
 	humanUsers           map[string]slack.User
 	users                map[string]slack.User
 	commands             map[string]*registeredCommand
@@ -53,6 +53,11 @@ type Bot struct {
 // GetUserId returns the Slack user ID for the Bot.
 func (b *Bot) GetUserId() string {
 	return b.userId
+}
+
+// GetBotId returns the Slack bot ID
+func (b *Bot) GetBotId() string {
+	return b.botId
 }
 
 // GetApi returns the Slack API client.
@@ -106,21 +111,19 @@ func (b *Bot) GetUserName(userId string) (string, error) {
 // The sent message will go to the same channel as the message that is being responded to and will highlight
 // the author of the original message.
 func (b *Bot) Respond(msg *slack.Msg, resp string) {
-	b.rtm.SendMessage(b.rtm.NewOutgoingMessage(fmt.Sprintf("<@%s>: %s", msg.User, resp), msg.Channel))
+	b.api.PostMessage(msg.Channel, slack.MsgOptionText(fmt.Sprintf("<@%s>: %s", msg.User, resp), false))
 }
 
 // PostMessage sends a new message to Slack using the provided channel and message string.
 // It returns the channel ID the message was posted to, and the timestamp that the message was posted at.
 // In combination these can be used to identify the exact message that was sent.
 func (b *Bot) PostMessage(channel, resp string, params slack.PostMessageParameters) (string, string, error) {
-	return b.rtm.PostMessage(channel, resp, params)
+	return b.api.PostMessage(channel, slack.MsgOptionText(resp, false))
 }
 
-// Say sends a new "action" on behalf of the Bot to a channel.
-// This is equivalent to using
-//  /me loves quadlek
+// Say sends a message to the provided channel
 func (b *Bot) Say(channel string, resp string) {
-	b.rtm.SendMessage(b.rtm.NewOutgoingMessage(fmt.Sprintf("%s", resp), channel))
+	b.api.PostMessage(channel, slack.MsgOptionText(resp, false))
 }
 
 // React attaches an emojii reaction to a message.
@@ -128,6 +131,39 @@ func (b *Bot) Say(channel string, resp string) {
 //  :+1:
 func (b *Bot) React(msg *slack.Msg, reaction string) {
 	b.api.AddReaction(reaction, slack.NewRefToMessage(msg.Channel, msg.Timestamp))
+}
+
+func (b *Bot) initInfo() error {
+	at, err := b.api.AuthTest()
+	if err != nil {
+		b.Log.Error("Unable to auth", zap.Error(err))
+		return err
+	}
+
+	b.userId = at.UserID
+	b.botId = at.BotID
+
+	channels, err := b.api.GetChannels(true)
+	if err != nil {
+		b.Log.Error("Unable to list channels", zap.Error(err))
+		return err
+	}
+	for _, channel := range channels {
+		b.channels[channel.ID] = channel
+		b.humanChannels[channel.Name] = channel
+	}
+
+	users, err := b.api.GetUsers()
+	if err != nil {
+		b.Log.Error("Unable to list users", zap.Error(err))
+		return err
+	}
+	for _, user := range users {
+		b.users[user.ID] = user
+		b.humanUsers[user.Name] = user
+	}
+
+	return nil
 }
 
 // handleEvents is a goroutine that handles and dispatches various events.
@@ -143,115 +179,18 @@ func (b *Bot) handleEvents() {
 		case webhook := <-b.pluginWebhookChannel:
 			b.dispatchWebhook(webhook)
 
-		// Slack message
-		case msg := <-b.rtm.IncomingEvents:
-			switch ev := msg.Data.(type) {
-			case *slack.HelloEvent:
-
-			// This fires when the Bot connects to slack.
-			// We use this opportunity to grab all of the channels and users, and index them for use later.
-			case *slack.ConnectedEvent:
-				b.username = ev.Info.User.Name
-				b.userId = ev.Info.User.ID
-				channels, err := b.api.GetChannels(true)
-				if err != nil {
-					b.Log.Error("Unable to list channels", zap.Error(err))
-					continue
-				}
-				for _, channel := range channels {
-					b.channels[channel.ID] = channel
-					b.humanChannels[channel.Name] = channel
-				}
-
-				users, err := b.api.GetUsers()
-				if err != nil {
-					b.Log.Error("Unable to list users", zap.Error(err))
-					continue
-				}
-				for _, user := range users {
-					b.users[user.ID] = user
-					b.humanUsers[user.Name] = user
-				}
-
-			// This fires when the Bot joins a channel
-			case *slack.ChannelJoinedEvent:
-				b.channels[ev.Channel.ID] = ev.Channel
-				b.Say(ev.Channel.ID, "I'm alive!")
-
-			// This fires when the Bot leaves a channel
-			case *slack.ChannelLeftEvent:
-				delete(b.channels, ev.Channel)
-
-			// This fires whenever the Bot sees a message sent to slack.
-			// The received message is dispatched to all plugin hooks unless the message originated from the Bot.
-			case *slack.MessageEvent:
-				if ev.Msg.User != b.userId {
-					b.dispatchHooks(&ev.Msg)
-				}
-
-			// This fires when a new channel is created. We index the details of the new channel.
-			case *slack.ChannelCreatedEvent:
-				if ev.Channel.IsChannel {
-					channel, err := b.api.GetChannelInfo(ev.Channel.ID)
-					if err != nil {
-						b.Log.Error("Unable to add channel", zap.Error(err))
-						continue
-					}
-					b.humanChannels[channel.Name] = *channel
-				}
-
-			// This fires when a user changes. We update our index of users.
-			case *slack.UserChangeEvent:
-				b.users[ev.User.ID] = ev.User
-				b.humanUsers[ev.User.Name] = ev.User
-
-			// This fires whenever a reaction is attached to a message. We dispatch this event to any reaction hooks.
-			case *slack.ReactionAddedEvent:
-				if ev.User != b.userId {
-					b.dispatchReactions(ev)
-				}
-
-			// This fires whenever a user goes away or comes back.
-			case *slack.PresenceChangeEvent:
-				fmt.Printf("Presence Change: %v\n", ev)
-
-			// This fires whenever there is an error received from the RTM API.
-			case *slack.RTMError:
-				fmt.Printf("Error: %s\n", ev.Error())
-
-			// This fires if the Bot's credentials are invalid.
-			case *slack.InvalidAuthEvent:
-				fmt.Printf("Invalid credentials")
-
-			}
 		}
 	}
 }
 
-// Start activates the Bot, creating a new API client and real time messaging(https://api.slack.com/rtm) client.
+// Start activates the Bot, creating a new API client.
 // It also calls out to the Slack API to obtain all of the channels and users.
 func (b *Bot) Start() {
-	b.rtm = b.api.NewRTM()
-	go b.rtm.ManageConnection()
-	go b.handleEvents()
 	go b.WebhookServer()
-
-	channels, err := b.api.GetChannels(false)
+	go b.handleEvents()
+	err := b.initInfo()
 	if err != nil {
 		panic(err)
-	}
-	for _, c := range channels {
-		b.humanChannels[c.Name] = c
-	}
-
-	users, err := b.api.GetUsers()
-	if err != nil {
-		panic(err)
-	}
-
-	for _, u := range users {
-		b.users[u.ID] = u
-		b.humanUsers[u.Name] = u
 	}
 }
 
@@ -262,7 +201,6 @@ func (b *Bot) Stop() {
 	if b.db != nil {
 		b.db.Close()
 	}
-	b.rtm.Disconnect()
 }
 
 // NewBot creates a new instance of Bot for use.
@@ -294,7 +232,7 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 		cancel:               cancel,
 		apiKey:               apiKey,
 		verificationToken:    verificationToken,
-		api:                  slack.New(apiKey),
+		api:                  slack.New(apiKey, slack.OptionDebug(true)),
 		channels:             make(map[string]slack.Channel, 10),
 		humanChannels:        make(map[string]slack.Channel),
 		humanUsers:           make(map[string]slack.User),
