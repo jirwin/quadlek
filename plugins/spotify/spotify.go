@@ -156,9 +156,11 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 					return err
 				}
 
-				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
-					Text:      fmt.Sprintf("<@%s> is listening to %s", cmdMsg.Command.UserId, playing.Item.URI),
-					InChannel: true,
+				if playing != nil && playing.Item != nil {
+					cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+						Text:      fmt.Sprintf("<@%s> is listening to %s", cmdMsg.Command.UserId, playing.Item.URI),
+						InChannel: true,
+					}
 				}
 
 				return nil
