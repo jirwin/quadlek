@@ -156,7 +156,7 @@ func (b *Bot) handleSlackEvent(w http.ResponseWriter, r *http.Request) {
 			b.humanUsers[iev.User.Name] = iev.User
 
 		default:
-			b.Log.Info("unhandled event")
+			b.Log.Info("unhandled event", zap.Any("event", iev))
 		}
 	}
 }
