@@ -21,7 +21,6 @@ require (
 	github.com/jirwin/xpost-quadlek v0.0.0-20190210050443-319004b8e32d
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-scan v0.0.0-20200228002420-2250e6e52487 // indirect
-	github.com/nlopes/slack v0.6.1-0.20191106133607-d06c2a2b3249
 	github.com/peterhellberg/giphy v0.0.0-20220111102515-dcc13c187a93 // indirect
 	github.com/purdyk/tvdb v0.0.0-20170517053125-80f06ad52285
 	github.com/satori/go.uuid v1.2.0

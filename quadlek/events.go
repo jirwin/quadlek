@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nlopes/slack/slackevents"
 	"github.com/slack-go/slack"
+	"github.com/slack-go/slack/slackevents"
 	"go.uber.org/zap"
 )
 
@@ -73,7 +73,7 @@ func (b *Bot) handleSlackEvent(w http.ResponseWriter, r *http.Request) {
 						}
 						channel, err := b.GetChannel(iev.Channel)
 						if err != nil {
-							b.Log.Error("error getting channel", zap.Error(err))
+							b.Log.Error("error getting channel", zap.Error(err), zap.String("channel", iev.Channel))
 							return
 						}
 						user, err := b.GetUser(iev.User)
