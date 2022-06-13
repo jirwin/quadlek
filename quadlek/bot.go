@@ -143,14 +143,22 @@ func (b *Bot) initInfo() error {
 	b.userId = at.UserID
 	b.botId = at.BotID
 
-	channels, _, err := b.api.GetConversations(&slack.GetConversationsParameters{})
-	if err != nil {
-		b.Log.Error("Unable to list channels", zap.Error(err))
-		return err
-	}
-	for _, channel := range channels {
-		b.channels[channel.ID] = channel
-		b.humanChannels[channel.Name] = channel
+	pageToken := ""
+	for {
+		channels, nextPage, err := b.api.GetConversations(&slack.GetConversationsParameters{Cursor: pageToken})
+		if err != nil {
+			b.Log.Error("Unable to list channels", zap.Error(err))
+			return err
+		}
+		for _, channel := range channels {
+			b.channels[channel.ID] = channel
+			b.humanChannels[channel.Name] = channel
+		}
+
+		if nextPage == "" {
+			break
+		}
+		pageToken = nextPage
 	}
 
 	users, err := b.api.GetUsers()
