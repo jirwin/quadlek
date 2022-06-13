@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"reflect"
 
 	"go.uber.org/zap"
@@ -23,7 +24,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const WebhookRoot = "https://quadlek.jirw.in/slack/plugin"
+const WebhookRoot = "https://%s/slack/plugin"
 
 var scopes = []string{
 	spotify.ScopePlaylistModifyPublic,
@@ -55,8 +56,12 @@ func startAuthFlow(stateId string) string {
 	return url
 }
 
+func webhookRoot() string {
+	return fmt.Sprintf(WebhookRoot, os.Getenv("SPOTIFY_WEBHOOK_DOMAIN"))
+}
+
 func getSpotifyAuth() spotify.Authenticator {
-	return spotify.NewAuthenticator(fmt.Sprintf("%s/%s", WebhookRoot, "spotifyAuthorize"), scopes...)
+	return spotify.NewAuthenticator(fmt.Sprintf("%s/%s", webhookRoot(), "spotifyAuthorize"), scopes...)
 }
 
 func getSpotifyClient(authToken *AuthToken) (spotify.Client, bool) {
@@ -248,7 +253,7 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 	}
 }
 
-func Register() quadlek.Plugin {
+func Register(webhookDomain string) quadlek.Plugin {
 	return quadlek.MakePlugin(
 		"spotify",
 		[]quadlek.Command{
