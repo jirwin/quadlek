@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nlopes/slack"
 	"github.com/nlopes/slack/slackevents"
+	"github.com/slack-go/slack"
 	"go.uber.org/zap"
 )
 
@@ -143,7 +143,7 @@ func (b *Bot) handleSlackEvent(w http.ResponseWriter, r *http.Request) {
 
 		case *slack.ChannelCreatedEvent:
 			if iev.Channel.IsChannel {
-				channel, err := b.api.GetChannelInfo(iev.Channel.ID)
+				channel, err := b.api.GetConversationInfo(iev.Channel.ID, false)
 				if err != nil {
 					b.Log.Error("Unable to add channel", zap.Error(err))
 					return

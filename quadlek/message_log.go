@@ -5,7 +5,7 @@ import (
 
 	"fmt"
 
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 )
 
 // MessageLotOpts is the stuct that you use to configure what messages you want to retrieve from the API.
@@ -26,17 +26,17 @@ type MessageLotOpts struct {
 
 // GetMessageLog uses channel and a set of options to get historical messages from the Slack API.
 func (b *Bot) GetMessageLog(channel string, opts MessageLotOpts) ([]slack.Message, error) {
-	params := slack.NewHistoryParameters()
+	params := &slack.GetConversationHistoryParameters{}
 	if opts.Count != 0 {
-		params.Count = opts.Count
+		params.Limit = opts.Count
 	}
 	if opts.Period != time.Duration(0) {
 		oldest := time.Now().UTC().Add(opts.Period*-1).UnixNano() / 1000000
 		oldestTs := fmt.Sprintf("%d.000", oldest)
 		params.Oldest = oldestTs
 	}
-
-	history, err := b.api.GetChannelHistory(channel, params)
+	params.ChannelID = channel
+	history, err := b.api.GetConversationHistory(params)
 	if err != nil {
 		return nil, err
 	}
@@ -62,12 +62,13 @@ func (b *Bot) GetMessageLog(channel string, opts MessageLotOpts) ([]slack.Messag
 }
 
 func (b *Bot) GetMessage(channel, ts string) (slack.Message, error) {
-	params := slack.NewHistoryParameters()
-	params.Count = 1
+	params := &slack.GetConversationHistoryParameters{}
+	params.Limit = 1
 	params.Latest = ts
 	params.Inclusive = true
+	params.ChannelID = channel
 
-	history, err := b.api.GetChannelHistory(channel, params)
+	history, err := b.api.GetConversationHistory(params)
 	if err != nil {
 		return slack.Message{}, err
 	}

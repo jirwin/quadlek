@@ -20,7 +20,7 @@ import (
 	"errors"
 
 	"github.com/boltdb/bolt"
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 )
 
 // This is the core struct for the Bot, and provides all methods required for interacting with various Slack APIs.
@@ -143,7 +143,7 @@ func (b *Bot) initInfo() error {
 	b.userId = at.UserID
 	b.botId = at.BotID
 
-	channels, err := b.api.GetChannels(true)
+	channels, _, err := b.api.GetConversations(&slack.GetConversationsParameters{})
 	if err != nil {
 		b.Log.Error("Unable to list channels", zap.Error(err))
 		return err

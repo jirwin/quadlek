@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/nlopes/slack"
+	"github.com/slack-go/slack"
 )
 
 // Command is the interface that plugins implement for slash commands.
