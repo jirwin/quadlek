@@ -133,7 +133,7 @@ func (b *Bot) handleSlackEvent(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-		case *slack.ReactionAddedEvent:
+		case *slackevents.ReactionAddedEvent:
 			b.dispatchReactions(iev)
 
 		case *slackevents.MemberJoinedChannelEvent:

@@ -3,6 +3,7 @@ package quadlek
 import (
 	"errors"
 	"fmt"
+	"github.com/slack-go/slack/slackevents"
 	"strings"
 
 	"go.uber.org/zap"
@@ -131,7 +132,7 @@ type ReactionHook interface {
 // ReactionHookMsg is the struct that is sent to a reaction hook when a message is reacted to.
 type ReactionHookMsg struct {
 	Bot      *Bot
-	Reaction *slack.ReactionAddedEvent
+	Reaction *slackevents.ReactionAddedEvent
 	Store    *Store
 }
 
@@ -439,7 +440,7 @@ func (b *Bot) dispatchWebhook(webhook *PluginWebhook) {
 }
 
 // dispatchReactions sends a reaction to all registered reaction hooks
-func (b *Bot) dispatchReactions(ev *slack.ReactionAddedEvent) {
+func (b *Bot) dispatchReactions(ev *slackevents.ReactionAddedEvent) {
 	for _, reactionHook := range b.reactionHooks {
 		reactionHook.ReactionHook.Channel() <- &ReactionHookMsg{
 			Bot:      b,
