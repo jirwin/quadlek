@@ -253,7 +253,7 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 	}
 }
 
-func Register(webhookDomain string) quadlek.Plugin {
+func Register() quadlek.Plugin {
 	return quadlek.MakePlugin(
 		"spotify",
 		[]quadlek.Command{
