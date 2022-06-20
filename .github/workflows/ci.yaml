@@ -2,6 +2,23 @@ name: ci
 
 on: push
 jobs:
+  proto_checks:
+    name: proto lint, breaking changes detections
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup buf
+        uses: wizhi/setup-buf@v1
+        with:
+          version: '1.5.0'
+      - name: Fetching base branch
+        run: |
+          git fetch -u origin ${{ github.base_ref }}:${{ github.base_ref }}
+      - name: Running linter, checking breaking changes
+        run: |
+          buf lint
+          buf breaking --against ".git#branch=${{ github.base_ref }}"
   golangci:
     name: lint
     runs-on: ubuntu-latest
