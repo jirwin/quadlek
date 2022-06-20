@@ -24,7 +24,7 @@ func echoCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	}
 }
 
-func echoHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
+func echoHook(_ context.Context, hookChannel <-chan *quadlek.HookMsg) {
 	for {
 		select {
 		case hookMsg := <-hookChannel:

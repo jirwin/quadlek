@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	v1 "github.com/jirwin/quadlek/pb/quadlek/plugins/spotify/v1"
 	"net/http"
 	"os"
 	"reflect"
@@ -17,11 +18,11 @@ import (
 	"strings"
 
 	"github.com/boltdb/bolt"
-	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/quadlek/quadlek"
 	uuid "github.com/satori/go.uuid"
 	"github.com/zmb3/spotify"
 	"golang.org/x/oauth2"
+	"google.golang.org/protobuf/proto"
 )
 
 const WebhookRoot = "https://%s/slack/plugin"
@@ -31,7 +32,7 @@ var scopes = []string{
 	spotify.ScopeUserReadCurrentlyPlaying,
 }
 
-func (at *AuthToken) GetOauthToken() *oauth2.Token {
+func GetOauthToken(at *v1.AuthToken) *oauth2.Token {
 	return &oauth2.Token{
 		AccessToken:  at.Token.AccessToken,
 		TokenType:    at.Token.TokenType,
@@ -40,8 +41,8 @@ func (at *AuthToken) GetOauthToken() *oauth2.Token {
 	}
 }
 
-func (at *AuthToken) PopulateFromOauthToken(token *oauth2.Token) {
-	at.Token = &Token{
+func PopulateFromOauthToken(at *v1.AuthToken, token *oauth2.Token) {
+	at.Token = &v1.Token{
 		AccessToken:  token.AccessToken,
 		TokenType:    token.TokenType,
 		RefreshToken: token.RefreshToken,
@@ -64,10 +65,10 @@ func getSpotifyAuth() spotify.Authenticator {
 	return spotify.NewAuthenticator(fmt.Sprintf("%s/%s", webhookRoot(), "spotifyAuthorize"), scopes...)
 }
 
-func getSpotifyClient(authToken *AuthToken) (spotify.Client, bool) {
+func getSpotifyClient(authToken *v1.AuthToken) (spotify.Client, bool) {
 
 	auth := getSpotifyAuth()
-	var token = authToken.GetOauthToken()
+	var token = GetOauthToken(authToken)
 	client := auth.NewClient(token)
 
 	if !reflect.DeepEqual(authToken.Scopes, scopes) {
@@ -89,7 +90,7 @@ func authFlow(cmdMsg *quadlek.CommandMsg, bkt *bolt.Bucket) error {
 	stateId := uuid.String()
 	authUrl := startAuthFlow(stateId)
 
-	authState := &AuthState{
+	authState := &v1.AuthState{
 		Id:          stateId,
 		UserId:      cmdMsg.Command.UserId,
 		ResponseUrl: cmdMsg.Command.ResponseUrl,
@@ -121,7 +122,7 @@ func nowPlaying(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 		select {
 		case cmdMsg := <-cmdChannel:
 			err := cmdMsg.Store.UpdateRaw(func(bkt *bolt.Bucket) error {
-				authToken := &AuthToken{}
+				authToken := &v1.AuthToken{}
 				authTokenBytes := bkt.Get([]byte("authtoken-" + cmdMsg.Command.UserId))
 				err := proto.Unmarshal(authTokenBytes, authToken)
 				if err != nil {
@@ -196,7 +197,7 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 
 			err := whMsg.Store.UpdateRaw(func(bkt *bolt.Bucket) error {
 				authStateBytes := bkt.Get([]byte("authstate-" + stateId[0]))
-				authState := &AuthState{}
+				authState := &v1.AuthState{}
 				err := proto.Unmarshal(authStateBytes, authState)
 				if err != nil {
 					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
@@ -223,8 +224,8 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 					return err
 				}
 
-				authToken := &AuthToken{}
-				authToken.PopulateFromOauthToken(token)
+				authToken := &v1.AuthToken{}
+				PopulateFromOauthToken(authToken, token)
 				authToken.Scopes = scopes
 
 				tokenBytes, err := proto.Marshal(authToken)

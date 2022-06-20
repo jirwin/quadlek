@@ -7,21 +7,20 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
+	"strings"
 	"time"
 
-	"go.uber.org/zap"
-
-	"reflect"
-
-	"strings"
-
 	"github.com/boltdb/bolt"
-	"github.com/golang/protobuf/proto"
 	"github.com/google/go-github/github"
-	"github.com/jirwin/quadlek/quadlek"
 	uuid "github.com/satori/go.uuid"
+	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	githuboauth "golang.org/x/oauth2/github"
+	"google.golang.org/protobuf/proto"
+
+	v1 "github.com/jirwin/quadlek/pb/quadlek/plugins/github/v1"
+	"github.com/jirwin/quadlek/quadlek"
 )
 
 var (
@@ -31,7 +30,7 @@ var (
 	defaultOwner string
 )
 
-func (at *AuthToken) GetOauthToken() *oauth2.Token {
+func GetOauthToken(at *v1.AuthToken) *oauth2.Token {
 	return &oauth2.Token{
 		AccessToken:  at.Token.AccessToken,
 		TokenType:    at.Token.TokenType,
@@ -40,8 +39,8 @@ func (at *AuthToken) GetOauthToken() *oauth2.Token {
 	}
 }
 
-func (at *AuthToken) PopulateFromOauthToken(token *oauth2.Token) {
-	at.Token = &Token{
+func PopulateFromOauthToken(at *v1.AuthToken, token *oauth2.Token) {
+	at.Token = &v1.Token{
 		AccessToken:  token.AccessToken,
 		TokenType:    token.TokenType,
 		RefreshToken: token.RefreshToken,
@@ -67,7 +66,7 @@ func authFlow(cmdMsg *quadlek.CommandMsg, bkt *bolt.Bucket) error {
 	stateId := uuid.NewV4().String()
 	authUrl := startAuthFlow(stateId)
 
-	authState := &AuthState{
+	authState := &v1.AuthState{
 		Id:          stateId,
 		UserId:      cmdMsg.Command.UserId,
 		ResponseUrl: cmdMsg.Command.ResponseUrl,
@@ -95,8 +94,8 @@ func authFlow(cmdMsg *quadlek.CommandMsg, bkt *bolt.Bucket) error {
 	return nil
 }
 
-func getGithubClient(ctx context.Context, authToken *AuthToken) (*github.Client, bool) {
-	token := authToken.GetOauthToken()
+func getGithubClient(ctx context.Context, authToken *v1.AuthToken) (*github.Client, bool) {
+	token := GetOauthToken(authToken)
 
 	if !reflect.DeepEqual(authToken.Scopes, scopes) {
 		return nil, true
@@ -152,7 +151,7 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			}
 
 			err := cmdMsg.Store.UpdateRaw(func(bkt *bolt.Bucket) error {
-				authToken := &AuthToken{}
+				authToken := &v1.AuthToken{}
 				authTokenBytes := bkt.Get([]byte("authtoken-" + cmdMsg.Command.UserId))
 				err := proto.Unmarshal(authTokenBytes, authToken)
 				if err != nil {
@@ -231,7 +230,7 @@ func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webho
 
 			err := whMsg.Store.UpdateRaw(func(bkt *bolt.Bucket) error {
 				authStateBytes := bkt.Get([]byte("authstate-" + state))
-				authState := &AuthState{}
+				authState := &v1.AuthState{}
 				err := proto.Unmarshal(authStateBytes, authState)
 				if err != nil {
 					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
@@ -271,8 +270,8 @@ func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webho
 					return err
 				}
 
-				authToken := &AuthToken{}
-				authToken.PopulateFromOauthToken(token)
+				authToken := &v1.AuthToken{}
+				PopulateFromOauthToken(authToken, token)
 				authToken.Scopes = scopes
 				authToken.GithubUser = user.GetLogin()
 

@@ -118,7 +118,7 @@ func nextEpCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			}
 
 			cmdMsg.Command.Reply() <- &quadlek.CommandResp{
-				Text:      fmt.Sprintf("%s - %s (http://www.imdb.com/title/%s) airs at %s %s\n", series.SeriesName, ep.EpisodeName, series.ImdbID, ep.FirstAired, series.AirsTime),
+				Text:      fmt.Sprintf("%s - %s (https://www.imdb.com/title/%s) airs at %s %s\n", series.SeriesName, ep.EpisodeName, series.ImdbID, ep.FirstAired, series.AirsTime),
 				InChannel: true,
 			}
 

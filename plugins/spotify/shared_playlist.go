@@ -2,14 +2,15 @@ package spotify
 
 import (
 	"context"
+	v1 "github.com/jirwin/quadlek/pb/quadlek/plugins/spotify/v1"
 
 	"go.uber.org/zap"
 
 	"regexp"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/quadlek/quadlek"
 	"github.com/zmb3/spotify"
+	"google.golang.org/protobuf/proto"
 )
 
 // FIXME: These shouldn't have to be hardcoded
@@ -36,7 +37,7 @@ func saveSongsHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
 			}
 
 			err := hookMsg.Store.Get("authtoken-"+sharedPlaylistUser, func(val []byte) error {
-				authToken := &AuthToken{}
+				authToken := &v1.AuthToken{}
 				err := proto.Unmarshal(val, authToken)
 				if err != nil {
 					return err

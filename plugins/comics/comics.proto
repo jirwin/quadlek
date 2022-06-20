@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-package comics;
-
-message Templates {
-    repeated string urls = 1;
-}
