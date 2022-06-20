@@ -4,7 +4,7 @@ on: [pull_request]
 
 jobs:
   proto_checks:
-    name: proto lint, breaking changes detection
+    name: proto lint, breaking changes detections
     runs-on: ubuntu-latest
     steps:
       -
@@ -13,6 +13,8 @@ jobs:
       -
         name: Setup buf
         uses: wizhi/setup-buf@v1
+        with:
+          version: '1.5.0'
       -
         name: Fetching base branch
         run: |
