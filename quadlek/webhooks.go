@@ -181,7 +181,7 @@ func (b *Bot) WebhookServer() {
 	// shut down gracefully, but wait no longer than 5 seconds before halting
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	srv.Shutdown(ctx)
+	_ = srv.Shutdown(ctx)
 	b.Log.Info("Shut down webhook server")
 }
 

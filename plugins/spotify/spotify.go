@@ -224,7 +224,7 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 				auth := getSpotifyAuth()
 				token, err := auth.Token(stateId[0], whMsg.Request)
 				if err != nil {
-					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
+					_ = whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 						Text: "Sorry! There was an error logging you into Spotify.",
 					})
 					return err
@@ -235,16 +235,22 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 				authToken.Scopes = scopes
 
 				tokenBytes, err := proto.Marshal(authToken)
+				if err != nil {
+					_ = whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
+						Text: "Sorry! There was an error logging you into Spotify.",
+					})
+					return err
+				}
 				err = bkt.Put([]byte("authtoken-"+authState.UserId), tokenBytes)
 				if err != nil {
-					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
+					_ = whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 						Text: "Sorry! There was an error logging you into Spotify.",
 					})
 					zap.L().Error("error storing auth token.")
 					return err
 				}
 
-				whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
+				_ = whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 					Text: "Successfully logged into Spotify. Try your command again please.",
 				})
 
