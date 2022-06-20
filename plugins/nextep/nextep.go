@@ -13,7 +13,7 @@ import (
 
 var tvdbKey string
 
-func getTVDBClient(authToken string) *tvdb.Client {
+func getTVDBClient(authToken string) (*tvdb.Client, error) {
 	auth := &tvdb.Auth{APIKey: authToken}
 
 	hClient := &http.Client{
@@ -22,9 +22,12 @@ func getTVDBClient(authToken string) *tvdb.Client {
 
 	tClient := tvdb.NewClient(hClient, auth)
 
-	tClient.Token.Login()
+	_, err := tClient.Token.Login()
+	if err != nil {
+		return nil, err
+	}
 
-	return tClient
+	return tClient, nil
 
 }
 
@@ -81,10 +84,15 @@ func nextEpCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 		select {
 		case cmdMsg := <-cmdChannel:
 			text := cmdMsg.Command.Text
-			client := getTVDBClient(tvdbKey)
+			client, err := getTVDBClient(tvdbKey)
+			if err != nil {
+				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+					Text: fmt.Sprintf("Show Search Failed: %s", err),
+				}
+				continue
+			}
 
 			id, err := findShowId(client, text)
-
 			if err != nil {
 				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
 					Text: fmt.Sprintf("Show Search Failed: %s", err),
@@ -93,7 +101,6 @@ func nextEpCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			}
 
 			series, err := client.Series.Get(id)
-
 			if err != nil {
 				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
 					Text: fmt.Sprintf("Series Lookup Failed: %s", err),
@@ -103,7 +110,7 @@ func nextEpCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 
 			if series.Status != "Continuing" {
 				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
-					Text: fmt.Sprintf("Series has ended"),
+					Text: "Series has ended",
 				}
 				continue
 			}

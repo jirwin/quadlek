@@ -40,7 +40,7 @@ func (b *Bot) handleSlackEvent(w http.ResponseWriter, r *http.Request) {
 		}
 		headers := w.Header()
 		headers.Set("Content-type", "text/plain")
-		w.Write([]byte(urlEvent.Challenge))
+		_, _ = w.Write([]byte(urlEvent.Challenge))
 
 	case slackevents.CallbackEvent:
 		switch iev := ev.InnerEvent.Data.(type) {
@@ -114,7 +114,7 @@ func (b *Bot) handleSlackEvent(w http.ResponseWriter, r *http.Request) {
 											msgOpts = append(msgOpts, slack.MsgOptionPostEphemeral(iev.User))
 										}
 
-										b.api.PostMessage(iev.Channel, msgOpts...)
+										_, _, _ = b.api.PostMessage(iev.Channel, msgOpts...)
 										return
 									}
 

@@ -87,9 +87,12 @@ func authFlow(cmdMsg *quadlek.CommandMsg, bkt *bolt.Bucket) error {
 		return err
 	}
 
-	cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+	err = cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 		Text: fmt.Sprintf("You need to authenticate to Github to continue. Please visit %s to do this.", authUrl),
 	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -120,8 +123,8 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 
 			msg := strings.SplitN(cmdMsg.Command.Text, " ", 2)
 			if len(msg) != 2 {
-				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
-					Text: fmt.Sprintf("You must provide a repo and issue title. ex: /issue jirwin/quadlek Make me better!"),
+				_ = cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+					Text: "You must provide a repo and issue title. ex: /issue jirwin/quadlek Make me better!",
 				})
 				continue
 			}
@@ -134,8 +137,8 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 				repo = repoParts[1]
 			} else if len(repoParts) == 1 {
 				if defaultOwner == "" {
-					cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
-						Text: fmt.Sprintf("You didn't specify an org for the repo, and no default org was defined."),
+					_ = cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+						Text: "You didn't specify an org for the repo, and no default org was defined.",
 					})
 				}
 				owner = defaultOwner
@@ -144,8 +147,8 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 
 			title := msg[1]
 			if title == "" {
-				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
-					Text: fmt.Sprintf("You must provide a title."),
+				_ = cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+					Text: "You must provide a title.",
 				})
 				continue
 			}
@@ -196,7 +199,7 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 					return err
 				}
 
-				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+				_ = cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 					Text:      fmt.Sprintf("%s created a new issue: %s", authToken.GithubUser, issue.GetHTMLURL()),
 					InChannel: true,
 				})
@@ -216,24 +219,28 @@ func issueCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 }
 
 func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.WebhookMsg) {
+	var err error
 	for {
 		select {
 		case whMsg := <-whChannel:
 			// respond to webhook
 			whMsg.ResponseWriter.WriteHeader(http.StatusOK)
-			whMsg.ResponseWriter.Write([]byte{})
+			_, err = whMsg.ResponseWriter.Write([]byte{})
+			if err != nil {
+				continue
+			}
 			whMsg.Done <- true
 
 			// process webhook
 			state := whMsg.Request.FormValue("state")
 			whMsg.Request.Body.Close()
 
-			err := whMsg.Store.UpdateRaw(func(bkt *bolt.Bucket) error {
+			err = whMsg.Store.UpdateRaw(func(bkt *bolt.Bucket) error {
 				authStateBytes := bkt.Get([]byte("authstate-" + state))
 				authState := &v1.AuthState{}
-				err := proto.Unmarshal(authStateBytes, authState)
+				err = proto.Unmarshal(authStateBytes, authState)
 				if err != nil {
-					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
+					_ = whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 						Text: "Sorry! There was an error logging you into Github.",
 					})
 					return err
@@ -241,10 +248,16 @@ func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webho
 
 				now := time.Now().Unix()
 				if authState.ExpireTime < now {
-					bkt.Delete([]byte("authstate-" + state))
-					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
+					err := bkt.Delete([]byte("authstate-" + state))
+					if err != nil {
+						return err
+					}
+					err = whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 						Text: "Sorry! There was an error logging you into Github.",
 					})
+					if err != nil {
+						return err
+					}
 					return errors.New("received expired auth request")
 				}
 
@@ -276,18 +289,27 @@ func githubAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webho
 				authToken.GithubUser = user.GetLogin()
 
 				tokenBytes, err := proto.Marshal(authToken)
+				if err != nil {
+					return err
+				}
 				err = bkt.Put([]byte("authtoken-"+authState.UserId), tokenBytes)
 				if err != nil {
-					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
+					err = whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 						Text: "Sorry! There was an error logging you into Github.",
 					})
+					if err != nil {
+						return err
+					}
 					zap.L().Error("error storing auth token.", zap.Error(err))
 					return err
 				}
 
-				whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
+				err = whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 					Text: fmt.Sprintf("Successfully logged into Github as %s. Try your command again please.", authToken.GithubUser),
 				})
+				if err != nil {
+					return err
+				}
 
 				return nil
 			})

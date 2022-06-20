@@ -15,9 +15,8 @@ import (
 
 // FIXME: These shouldn't have to be hardcoded
 const (
-	sharedPlaylist         = "2oeMx9gAl3fx2qThl11jt1"
-	sharedPlaylistUser     = "U0RL53ETW"
-	sharedPlaylistUsername = "jirwin304"
+	sharedPlaylist     = "2oeMx9gAl3fx2qThl11jt1"
+	sharedPlaylistUser = "U0RL53ETW"
 )
 
 var spotifyTrackRegex = regexp.MustCompile(`spotify:track:(\w+)\b`)

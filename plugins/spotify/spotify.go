@@ -183,7 +183,10 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 		case whMsg := <-whChannel:
 			// respond to webhook
 			whMsg.ResponseWriter.WriteHeader(http.StatusOK)
-			whMsg.ResponseWriter.Write([]byte{})
+			_, err := whMsg.ResponseWriter.Write([]byte{})
+			if err != nil {
+				continue
+			}
 			whMsg.Done <- true
 
 			// process webhook
@@ -195,12 +198,12 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 				continue
 			}
 
-			err := whMsg.Store.UpdateRaw(func(bkt *bolt.Bucket) error {
+			err = whMsg.Store.UpdateRaw(func(bkt *bolt.Bucket) error {
 				authStateBytes := bkt.Get([]byte("authstate-" + stateId[0]))
 				authState := &v1.AuthState{}
 				err := proto.Unmarshal(authStateBytes, authState)
 				if err != nil {
-					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
+					_ = whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 						Text: "Sorry! There was an error logging you into Spotify.",
 					})
 					return err
@@ -208,8 +211,11 @@ func spotifyAuthorizeWebhook(ctx context.Context, whChannel <-chan *quadlek.Webh
 
 				now := time.Now().UnixNano()
 				if authState.ExpireTime < now {
-					bkt.Delete([]byte("authstate-" + stateId[0]))
-					whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
+					err = bkt.Delete([]byte("authstate-" + stateId[0]))
+					if err != nil {
+						return err
+					}
+					_ = whMsg.Bot.RespondToSlashCommand(authState.ResponseUrl, &quadlek.CommandResp{
 						Text: "Sorry! There was an error logging you into Spotify.",
 					})
 					return errors.New("Received expired auth request")
