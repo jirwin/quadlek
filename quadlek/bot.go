@@ -33,7 +33,6 @@ type Bot struct {
 	api                  *slack.Client
 	channels             map[string]slack.Channel
 	humanChannels        map[string]slack.Channel
-	username             string
 	userId               string
 	botId                string
 	humanUsers           map[string]slack.User
@@ -107,11 +106,11 @@ func (b *Bot) GetUserName(userId string) (string, error) {
 	return user.Name, nil
 }
 
-// Respond responds to a slack message
+// Respond responds to a Slack message
 // The sent message will go to the same channel as the message that is being responded to and will highlight
 // the author of the original message.
 func (b *Bot) Respond(msg *slack.Msg, resp string) {
-	b.api.PostMessage(msg.Channel, slack.MsgOptionText(fmt.Sprintf("<@%s>: %s", msg.User, resp), false))
+	b.api.PostMessage(msg.Channel, slack.MsgOptionText(fmt.Sprintf("<@%s>: %s", msg.User, resp), false)) //nolint:errcheck
 }
 
 // PostMessage sends a new message to Slack using the provided channel and message string.
@@ -123,14 +122,14 @@ func (b *Bot) PostMessage(channel, resp string, params slack.PostMessageParamete
 
 // Say sends a message to the provided channel
 func (b *Bot) Say(channel string, resp string) {
-	b.api.PostMessage(channel, slack.MsgOptionText(resp, false))
+	b.api.PostMessage(channel, slack.MsgOptionText(resp, false)) //nolint:errcheck
 }
 
 // React attaches an emojii reaction to a message.
 // Reactions are formatted like:
 //  :+1:
 func (b *Bot) React(msg *slack.Msg, reaction string) {
-	b.api.AddReaction(reaction, slack.NewRefToMessage(msg.Channel, msg.Timestamp))
+	b.api.AddReaction(reaction, slack.NewRefToMessage(msg.Channel, msg.Timestamp)) //nolint:errcheck
 }
 
 func (b *Bot) initInfo() error {
@@ -222,8 +221,6 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 	// Seed the RNG with the current time globally
 	rand.Seed(time.Now().UnixNano())
 
-	ctx, cancel := context.WithCancel(parentCtx)
-
 	db, err := bolt.Open(dbPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, err
@@ -233,6 +230,8 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := context.WithCancel(parentCtx)
 
 	return &Bot{
 		Log:                  log,
