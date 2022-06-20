@@ -8,7 +8,6 @@ ENV APP_PATH=/quadlek
 RUN mkdir -p $APP_PATH
 ADD . $APP_PATH
 WORKDIR $APP_PATH
-RUN go mod vendor
 RUN go build -mod=vendor -o /build/quadlekBot ./cmd/quadlek
 
 

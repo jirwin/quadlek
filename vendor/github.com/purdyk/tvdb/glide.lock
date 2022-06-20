@@ -1,0 +1,18 @@
+hash: bf81b6e74b1e1d746fa69d50f68ca23255dd1726b1f7b816217a34f5cd394895
+updated: 2017-01-01T14:45:05.190707364+01:00
+imports:
+- name: github.com/dghubble/sling
+  version: eb56e89ac5088bebb12eef3cb4b293300f43608b
+- name: github.com/go-resty/resty
+  version: 7e4e1bce2547d2a515c6009329cd6a31a53a9dbc
+- name: github.com/google/go-querystring
+  version: 9235644dd9e52eeae6fa48efd539fdc351a0af53
+  subpackages:
+  - query
+- name: golang.org/x/net
+  version: 8fd7f25955530b92e73e9e1932a41b522b22ccd9
+  subpackages:
+  - publicsuffix
+- name: gopkg.in/urfave/cli.v2
+  version: 0bdeddeeb0f650497d603c4ad7b20cfe685682f6
+testImports: []
