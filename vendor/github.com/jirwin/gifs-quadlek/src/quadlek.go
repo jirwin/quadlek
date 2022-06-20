@@ -2,6 +2,7 @@ package gifs
 
 import (
 	"context"
+	"go.uber.org/zap"
 
 	"fmt"
 
@@ -14,13 +15,19 @@ import (
 
 var gifs *Gifs
 
+const (
+	SaveReaction = "good-bot"
+)
+
 func gifCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	for {
 		select {
 		case cmdMsg := <-cmdChannel:
 			text := cmdMsg.Command.Text
 			if text != "" {
-				cmdMsg.Store.Get(text, func(v []byte) error {
+				var gifUrl string
+				var err error
+				_ = cmdMsg.Store.Get(text, func(v []byte) error {
 					if v != nil {
 						cmdMsg.Command.Reply() <- &quadlek.CommandResp{
 							Text:      string(v),
@@ -28,7 +35,7 @@ func gifCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 						}
 						return nil
 					}
-					r, err := gifs.Translate(text)
+					gifUrl, err = gifs.Translate(text)
 					if err != nil {
 						cmdMsg.Command.Reply() <- &quadlek.CommandResp{
 							Text:      fmt.Sprintf("an error occured: %s", err.Error()),
@@ -37,11 +44,18 @@ func gifCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 						return nil
 					}
 					cmdMsg.Command.Reply() <- &quadlek.CommandResp{
-						Text:      r,
+						Text:      gifUrl,
 						InChannel: true,
 					}
 					return nil
 				})
+				if gifUrl != "" {
+					err = cmdMsg.Store.Update(fmt.Sprintf("url:%s", gifUrl), []byte(text))
+					if err != nil {
+						zap.L().Error("error updating store with gif url", zap.Error(err))
+					}
+				}
+
 			}
 
 		case <-ctx.Done():
@@ -95,8 +109,47 @@ func gifSaveCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) 
 	}
 }
 
+func gifReaction(ctx context.Context, reactionChannel <-chan *quadlek.ReactionHookMsg) {
+	for {
+		select {
+		case rh := <-reactionChannel:
+			if strings.HasPrefix(rh.Reaction.Reaction, SaveReaction) {
+				msg, err := rh.Bot.GetMessage(rh.Reaction.Item.Channel, rh.Reaction.Item.Timestamp)
+				if err != nil {
+					fmt.Println("error getting message:", err.Error())
+					continue
+				}
+
+				if msg.User != rh.Bot.GetUserId() {
+					continue
+				}
+
+				err = rh.Store.Get(fmt.Sprintf("url:%s", msg.Text), func(b []byte) error {
+					if b != nil {
+						return nil
+					}
+					err = rh.Store.Update(string(b), []byte(msg.Text))
+					if err != nil {
+						return err
+					}
+					return nil
+				})
+				if err != nil {
+					rh.Bot.Say(rh.Reaction.Item.Channel, "Error saving gif")
+					continue
+				}
+
+			}
+
+		case <-ctx.Done():
+			fmt.Println("Shutting down gif react hook")
+			return
+		}
+	}
+}
+
 func Register(apiKey string) quadlek.Plugin {
-	gifs = NewGifs(apiKey, "PG-13")
+	gifs = NewGifs(apiKey, "R")
 	return quadlek.MakePlugin(
 		"gifs",
 		[]quadlek.Command{
@@ -104,7 +157,9 @@ func Register(apiKey string) quadlek.Plugin {
 			quadlek.MakeCommand("gsave", gifSaveCommand),
 		},
 		nil,
-		nil,
+		[]quadlek.ReactionHook{
+			quadlek.MakeReactionHook(gifReaction),
+		},
 		nil,
 		nil,
 	)

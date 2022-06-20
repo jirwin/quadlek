@@ -146,8 +146,10 @@ github.com/jirwin/comics v0.0.0-20180408212830-43822d8acb7c h1:wpXY17SjLp8D723Wn
 github.com/jirwin/comics v0.0.0-20180408212830-43822d8acb7c/go.mod h1:TSVIgA8nw2WBuJayNR/EjfC3f+vMC+yM8NgzrpEs/sw=
 github.com/jirwin/factpacks v0.0.1 h1:UcJUfddVEOla5rdNisSLOZkGJpkjF0Y/a0LUy5K8UBg=
 github.com/jirwin/factpacks v0.0.1/go.mod h1:SUxD6ulZUeelQfLxSvO3XmLb8WyN9tu35QkXe6vQfTw=
-github.com/jirwin/gifs-quadlek v0.0.0-20180921045046-85bb51756261 h1:G/kM3L+bi7zlkXfT1N+LRxL3NNp0FV6Oo0jEgg95r7E=
 github.com/jirwin/gifs-quadlek v0.0.0-20180921045046-85bb51756261/go.mod h1:Bf+9e+qPWdduZqqc+DxHvN8boM6yIfBuz2SiUf/c6yw=
+github.com/jirwin/gifs-quadlek v0.0.0-20220620083533-f84367d2dbab h1:GwIxtyrp6a0bO4GulP63WzjBDiK4R5wKgYHYELeyDAE=
+github.com/jirwin/gifs-quadlek v0.0.0-20220620083533-f84367d2dbab/go.mod h1:63RbcceUJES7v3atAmKPyRDumIJaMAYt+fs5gZG2uOM=
+github.com/jirwin/quadlek v0.0.0-20220620070817-ee4dc9835d51/go.mod h1:xFaHEK/1io53DfnEnaPDEX1lCzTP/UQ1j/ya6sWLtWo=
 github.com/jirwin/xpost-quadlek v0.0.0-20190210050443-319004b8e32d h1:OYTz6ORMMivaciOG0Y+JBi6GCaJWmobpDDRdpTeB+BM=
 github.com/jirwin/xpost-quadlek v0.0.0-20190210050443-319004b8e32d/go.mod h1:7oJB8bGr+HcxgLHyjREDP3wpCvkHZi2B6d0DF0Ka9xU=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
@@ -349,8 +351,9 @@ golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20211019181941-9d821ace8654/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d h1:Zu/JngovGLVi6t2J3nmAf3AoTDwuzw85YZ3b9o4yU7s=
 golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20220615213510-4f61da869c0c h1:aFV+BgZ4svzjfabn8ERpuB4JI4N6/rdy1iusx77G3oU=
+golang.org/x/sys v0.0.0-20220615213510-4f61da869c0c/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 golang.org/x/text v0.0.0-20170915032832-14c0d48ead0c/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
