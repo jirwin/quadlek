@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/jirwin/quadlek/plugins/admin"
 	"os"
 	"os/signal"
 
@@ -86,6 +87,12 @@ func run(c *cli.Context) error {
 	err = bot.RegisterPlugin(gifPlugin)
 	if err != nil {
 		fmt.Printf("Error registering gifs plugin: %s\n", err.Error())
+		return err
+	}
+
+	err = bot.RegisterPlugin(admin.Register())
+	if err != nil {
+		fmt.Printf("Error registering admin plugin: %s\n", err.Error())
 		return err
 	}
 
