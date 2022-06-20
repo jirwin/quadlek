@@ -341,18 +341,21 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 	}
 
 	err = plugin.Load(b, b.getStore(plugin.GetId()))
+	if err != nil {
+		return err
+	}
 
 	for _, command := range plugin.GetCommands() {
 		_, ok := b.commands[command.GetName()]
 		if ok {
-			return errors.New(fmt.Sprintf("Command already exists: %s", command.GetName()))
+			return fmt.Errorf("Command already exists: %s", command.GetName())
 		}
 		b.commands[command.GetName()] = &registeredCommand{
 			PluginId: plugin.GetId(),
 			Command:  command,
 		}
+		b.wg.Add(1)
 		go func(c Command) {
-			b.wg.Add(1)
 			defer b.wg.Done()
 
 			c.Run(b.ctx)
@@ -364,8 +367,8 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 			PluginId: plugin.GetId(),
 			Hook:     hook,
 		})
+		b.wg.Add(1)
 		go func(h Hook) {
-			b.wg.Add(1)
 			defer b.wg.Done()
 
 			h.Run(b.ctx)
@@ -377,8 +380,8 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 			PluginId:     plugin.GetId(),
 			ReactionHook: reactionHook,
 		})
+		b.wg.Add(1)
 		go func(r ReactionHook) {
-			b.wg.Add(1)
 			defer b.wg.Done()
 
 			r.Run(b.ctx)
@@ -388,14 +391,14 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 	for _, webhook := range plugin.GetWebhooks() {
 		_, ok := b.webhooks[webhook.GetName()]
 		if ok {
-			return errors.New(fmt.Sprintf("Webhook already exists: %s", webhook.GetName()))
+			return fmt.Errorf("Webhook already exists: %s", webhook.GetName())
 		}
 		b.webhooks[webhook.GetName()] = &registeredWebhook{
 			PluginId: plugin.GetId(),
 			Webhook:  webhook,
 		}
+		b.wg.Add(1)
 		go func(wh Webhook) {
-			b.wg.Add(1)
 			defer b.wg.Done()
 
 			wh.Run(b.ctx)
@@ -482,8 +485,14 @@ func (b *Bot) RespondToSlashCommand(url string, cmdResp *CommandResp) error {
 		return err
 	}
 	data := bytes.NewBuffer(jsonBytes)
-	json.NewEncoder(data).Encode(cmdResp)
+	err = json.NewEncoder(data).Encode(cmdResp)
+	if err != nil {
+		return err
+	}
 	resp, err := http.Post(url, "application/json", data)
+	if err != nil {
+		return err
+	}
 	defer resp.Body.Close()
 	if err != nil {
 		b.Log.Error("error responding to slash command.", zap.Error(err))

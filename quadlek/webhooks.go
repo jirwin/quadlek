@@ -58,7 +58,7 @@ type slashCommandErrorResponse struct {
 func jsonResponse(w http.ResponseWriter, obj interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(obj)
+	_ = json.NewEncoder(w).Encode(obj)
 }
 
 // generateErrorMsg encodes a slashCommandErrorResponse to json and writes it to the provided HTTP response
@@ -109,7 +109,7 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 				// Got a nil response, so the plugin is explicitly not sending a response here and will send one manually.
 				if resp == nil {
 					w.WriteHeader(http.StatusOK)
-					w.Write([]byte{})
+					_, _ = w.Write([]byte{})
 					return
 				}
 
@@ -117,13 +117,13 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 				jsonResponse(w, resp)
 			} else {
 				<-timer.C
-				b.RespondToSlashCommand(cmd.ResponseUrl, resp)
+				_ = b.RespondToSlashCommand(cmd.ResponseUrl, resp)
 			}
 			return
 
 		case <-timer.C:
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte{})
+			_, _ = w.Write([]byte{})
 			return
 		}
 	}
@@ -179,8 +179,9 @@ func (b *Bot) WebhookServer() {
 
 	b.Log.Info("Shutting down webhook server")
 	// shut down gracefully, but wait no longer than 5 seconds before halting
-	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
-	srv.Shutdown(ctx)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = srv.Shutdown(ctx)
 	b.Log.Info("Shut down webhook server")
 }
 

@@ -20,7 +20,7 @@ func load(consumerKey, consumerSecret, accessToken, accessSecret string, filter 
 			client := twitter.NewClient(httpClient)
 
 			followFilters := []string{}
-			for follow, _ := range filter {
+			for follow := range filter {
 				followFilters = append(followFilters, follow)
 			}
 
@@ -35,27 +35,24 @@ func load(consumerKey, consumerSecret, accessToken, accessSecret string, filter 
 				return
 			}
 
-			for {
-				select {
-				case msg := <-stream.Messages:
-					switch m := msg.(type) {
-					case *twitter.Tweet:
-						if channel, ok := filter[m.User.IDStr]; ok {
-							if m.RetweetedStatus != nil {
-								zap.L().Info("Got a tweet containing a retweet", zap.Any("tweet", m))
-								if replyChannel, ok := filter[m.RetweetedStatus.User.IDStr]; ok && channel == replyChannel {
-									zap.L().Info("Tweet contains retweet from already monitored account, cancelling message", zap.Any("tweet", m))
-									continue
-								}
-							}
-							twitterUrl := fmt.Sprintf("https://twitter.com/%s/status/%s", m.User.ScreenName, m.IDStr)
-							chanId, err := bot.GetChannelId(channel)
-							if err != nil {
-								zap.L().Error("unable to find channel.", zap.Error(err))
+			for msg := range stream.Messages {
+				switch m := msg.(type) {
+				case *twitter.Tweet:
+					if channel, ok := filter[m.User.IDStr]; ok {
+						if m.RetweetedStatus != nil {
+							zap.L().Info("Got a tweet containing a retweet", zap.Any("tweet", m))
+							if replyChannel, ok := filter[m.RetweetedStatus.User.IDStr]; ok && channel == replyChannel {
+								zap.L().Info("Tweet contains retweet from already monitored account, cancelling message", zap.Any("tweet", m))
 								continue
 							}
-							bot.Say(chanId, twitterUrl)
 						}
+						twitterUrl := fmt.Sprintf("https://twitter.com/%s/status/%s", m.User.ScreenName, m.IDStr)
+						chanId, err := bot.GetChannelId(channel)
+						if err != nil {
+							zap.L().Error("unable to find channel.", zap.Error(err))
+							continue
+						}
+						bot.Say(chanId, twitterUrl)
 					}
 				}
 			}

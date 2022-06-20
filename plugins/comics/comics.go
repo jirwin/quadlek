@@ -1,22 +1,17 @@
-//go:generate protoc --go_out=. comics.proto
-
 package comics
 
 import (
 	"context"
-
-	"go.uber.org/zap"
-
 	"fmt"
+	v1 "github.com/jirwin/quadlek/pb/quadlek/plugins/comics/v1"
+	"html"
+	"math/rand"
+	"strconv"
 	"strings"
 
-	"math/rand"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 
-	"strconv"
-
-	"html"
-
-	"github.com/golang/protobuf/proto"
 	"github.com/jirwin/comics/src/comics"
 	"github.com/jirwin/quadlek/quadlek"
 )
@@ -28,7 +23,7 @@ var (
 
 func addComicTemplate(templateUrl string, cmdMsg *quadlek.CommandMsg) error {
 	err := cmdMsg.Store.GetAndUpdate("templates", func(templatesProto []byte) ([]byte, error) {
-		templates := &Templates{}
+		templates := &v1.Templates{}
 		err := proto.Unmarshal(templatesProto, templates)
 		if err != nil {
 			return nil, err
@@ -51,7 +46,7 @@ func listTemplates(cmdMsg *quadlek.CommandMsg) ([]string, error) {
 	var templateUrls []string
 
 	err := cmdMsg.Store.Get("templates", func(templateProto []byte) error {
-		templates := &Templates{}
+		templates := &v1.Templates{}
 		err := proto.Unmarshal(templateProto, templates)
 		if err != nil {
 			return err
@@ -69,12 +64,12 @@ func listTemplates(cmdMsg *quadlek.CommandMsg) ([]string, error) {
 
 func delComicTemplate(templateId string, cmdMsg *quadlek.CommandMsg) error {
 	return cmdMsg.Store.GetAndUpdate("templates", func(templateProto []byte) ([]byte, error) {
-		templates := &Templates{}
+		templates := &v1.Templates{}
 		err := proto.Unmarshal(templateProto, templates)
 		if err != nil {
 			return nil, err
 		}
-		newTemplateUrls := []string{}
+		var newTemplateUrls []string
 		tId, err := strconv.Atoi(templateId)
 		if err != nil {
 			return nil, err
@@ -104,7 +99,7 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 	comicUrl := ""
 
 	err := cmdMsg.Store.Get("templates", func(templatesProto []byte) error {
-		templates := &Templates{}
+		templates := &v1.Templates{}
 		err := proto.Unmarshal(templatesProto, templates)
 		if err != nil {
 			return err
@@ -128,10 +123,10 @@ func pickAndRenderTemplate(cmdMsg *quadlek.CommandMsg) (string, error) {
 		}
 
 		if len(msgs) < len(comic.Bubbles) {
-			return fmt.Errorf("Not enough channel history for this comic.")
+			return fmt.Errorf("not enough channel history for this comic")
 		}
 
-		comicTxt := []string{}
+		var comicTxt []string
 		for i := len(comic.Bubbles) - 1; i >= 0; i-- {
 			comicTxt = append(comicTxt, formatLogMsg(msgs[i].Text))
 		}
@@ -167,18 +162,24 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 				case "list":
 					templates, err := listTemplates(cmdMsg)
 					if err != nil {
-						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
-							Text:      fmt.Sprintf("error listing template"),
+						err := cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+							Text:      "error listing template",
 							InChannel: false,
 						})
+						if err != nil {
+							return
+						}
 						continue
 					}
 
 					if len(templates) == 0 {
-						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+						err := cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 							Text:      "There are no templates configured.",
 							InChannel: false,
 						})
+						if err != nil {
+							return
+						}
 						continue
 					}
 
@@ -187,54 +188,75 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 						msgText += fmt.Sprintf("%d. %s\n", i, template)
 					}
 
-					cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+					err = cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 						Text:      msgText,
 						InChannel: false,
 					})
+					if err != nil {
+						return
+					}
 
 				case "del":
 					if len(split) != 2 {
-						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+						err := cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 							Text:      "You must provide the id of the template to delete.",
 							InChannel: false,
 						})
+						if err != nil {
+							return
+						}
 						continue
 					}
 					err := delComicTemplate(split[1], cmdMsg)
 					if err != nil {
-						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+						err := cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 							Text:      fmt.Sprintf("error deleting template: %s", err.Error()),
 							InChannel: false,
 						})
+						if err != nil {
+							return
+						}
 						continue
 					}
 
-					cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+					err = cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 						Text:      "Successfully deleted template " + split[1],
 						InChannel: false,
 					})
+					if err != nil {
+						return
+					}
 
 				case "load":
 					if len(split) != 2 {
-						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+						err := cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 							Text:      "You must provide the url of a template to load.",
 							InChannel: false,
 						})
+						if err != nil {
+							return
+						}
 						continue
 					}
 					err := addComicTemplate(split[1], cmdMsg)
 					if err != nil {
-						cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+						err := cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 							Text:      fmt.Sprintf("error adding template: %s", err.Error()),
 							InChannel: false,
 						})
+						if err != nil {
+							return
+						}
 						continue
 					}
 
-					cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+					err = cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 						Text:      "Successfully added template " + split[1],
 						InChannel: false,
 					})
+					if err != nil {
+						return
+					}
 				}
 
 				continue
@@ -242,17 +264,23 @@ func comicCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 
 			comicUrl, err := pickAndRenderTemplate(cmdMsg)
 			if err != nil {
-				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+				err := cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 					Text:      fmt.Sprintf("error rendering template: %s", err.Error()),
 					InChannel: false,
 				})
+				if err != nil {
+					return
+				}
 				continue
 			}
 
-			cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+			err = cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
 				Text:      fmt.Sprintf("<@%s> made a new comic: %s", cmdMsg.Command.UserId, comicUrl),
 				InChannel: true,
 			})
+			if err != nil {
+				return
+			}
 
 		case <-ctx.Done():
 			zap.L().Info("Exiting comic command.")

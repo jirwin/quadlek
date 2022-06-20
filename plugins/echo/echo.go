@@ -29,6 +29,9 @@ func echoHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
 		select {
 		case hookMsg := <-hookChannel:
 			hookMsg.Bot.Respond(hookMsg.Msg, fmt.Sprintf("echo: %s", hookMsg.Msg.Text))
+		case <-ctx.Done():
+			zap.L().Info("Exiting echo hook")
+			return
 		}
 	}
 }

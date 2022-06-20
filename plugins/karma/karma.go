@@ -38,7 +38,7 @@ func scoreCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 			})
 			if err != nil {
 				zap.L().Error("unable to get score", zap.Error(err))
-				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{
+				cmdMsg.Bot.RespondToSlashCommand(cmdMsg.Command.ResponseUrl, &quadlek.CommandResp{ //nolint:errcheck
 					Text: fmt.Sprintf("Unable to fetch score for %s", cmdMsg.Command.Text),
 				})
 			}
@@ -51,7 +51,7 @@ func scoreCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 }
 
 var (
-	ppRegex = regexp.MustCompile(".+\\+\\+$")
+	ppRegex = regexp.MustCompile(`.+\+\+$`)
 	mmRegex = regexp.MustCompile(".+--$")
 )
 
