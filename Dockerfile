@@ -12,9 +12,11 @@ RUN go build -mod=vendor -o /build/quadlekBot ./cmd/quadlek
 
 
 FROM alpine
+ARG COMMIT=""
+LABEL commit=${COMMIT}
 
 RUN apk add --no-cache ca-certificates jq vim curl
 
 COPY --from=builder /build/quadlekBot /
-
+ENV COMMIT_SHA=${COMMIT}
 ENTRYPOINT ["/quadlekBot"]

@@ -7,6 +7,7 @@ package quadlek
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"go.uber.org/zap"
@@ -168,6 +169,12 @@ func (b *Bot) initInfo() error {
 	for _, user := range users {
 		b.users[user.ID] = user
 		b.humanUsers[user.Name] = user
+	}
+
+	if v := os.Getenv("COMMIT_SHA"); v != "" {
+		if c, ok := b.humanChannels["qdev"]; ok {
+			b.Say(c.ID, fmt.Sprintf("I'm back. My version is %s", v))
+		}
 	}
 
 	return nil
