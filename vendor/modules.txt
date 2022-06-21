@@ -53,6 +53,9 @@ github.com/mailru/easyjson/jwriter
 # github.com/mattn/go-scan v0.0.0-20200228002420-2250e6e52487
 ## explicit
 github.com/mattn/go-scan
+# github.com/peterhellberg/giphy v0.0.0-20220111102515-dcc13c187a93
+## explicit; go 1.17
+github.com/peterhellberg/giphy
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors

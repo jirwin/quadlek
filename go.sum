@@ -158,6 +158,8 @@ github.com/mattn/go-scan v0.0.0-20200228002420-2250e6e52487 h1:FsO95DVHMp/Eldk9c
 github.com/mattn/go-scan v0.0.0-20200228002420-2250e6e52487/go.mod h1:sNJr+MyYo/WAx30FGeqHkJGtNyqmD6oQyfHrwC/tDVo=
 github.com/olivere/elastic/v7 v7.0.12/go.mod h1:14rWX28Pnh3qCKYRVnSGXWLf9MbLonYS/4FDCY3LAPo=
 github.com/opentracing/opentracing-go v1.1.0/go.mod h1:UkNAQd3GIcIGf0SeVgPpRdFStlNbqXla1AfSYxPUl2o=
+github.com/peterhellberg/giphy v0.0.0-20220111102515-dcc13c187a93 h1:P7n7WcgAfZqj8Is8h2jLuVHH9Dvzbgcb9iP7TZWi5wk=
+github.com/peterhellberg/giphy v0.0.0-20220111102515-dcc13c187a93/go.mod h1:P4rRzLoVaDg/50tI4NxIRsBkV4lFEt5jYA5gyXwQaMg=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
