@@ -21,7 +21,7 @@ func gifCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	for {
 		select {
 		case cmdMsg := <-cmdChannel:
-			text := cmdMsg.Command.Text
+			text := strings.TrimPrefix(cmdMsg.Command.Text, "url:")
 			if text != "" {
 				var gifUrl string
 				var err error
@@ -108,6 +108,35 @@ func gifSaveCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) 
 	}
 }
 
+func gifListCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
+	for {
+		select {
+		case cmdMsg := <-cmdChannel:
+			sb := &strings.Builder{}
+			err := cmdMsg.Store.ForEach(func(key string, value []byte) error {
+				if strings.HasPrefix(key, "url:") {
+					return nil
+				}
+				_, err := sb.WriteString(fmt.Sprintf("%s => %s\n", key, string(value)))
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				continue
+			}
+			cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+				Text:      sb.String(),
+				InChannel: false,
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 func gifReaction(ctx context.Context, reactionChannel <-chan *quadlek.ReactionHookMsg) {
 	for {
 		select {
@@ -156,6 +185,7 @@ func Register(apiKey string) quadlek.Plugin {
 		[]quadlek.Command{
 			quadlek.MakeCommand("g", gifCommand),
 			quadlek.MakeCommand("gsave", gifSaveCommand),
+			quadlek.MakeCommand("glist", gifListCommand),
 		},
 		nil,
 		[]quadlek.ReactionHook{
