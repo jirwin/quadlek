@@ -9,13 +9,13 @@ type Store struct {
 	pluginId string
 }
 
-func (s *Store) ForEach(forEachFunc func(key string, value []byte) error) error {
-	err := s.db.View(func(tx *bolt.Tx) error {
+func (s *Store) ForEach(forEachFunc func(bucket *bolt.Bucket, key string, value []byte) error) error {
+	err := s.db.Update(func(tx *bolt.Tx) error {
 		rootBkt := tx.Bucket([]byte("plugins"))
 
 		pluginBkt := rootBkt.Bucket([]byte(s.pluginId))
 		err := pluginBkt.ForEach(func(k []byte, v []byte) error {
-			return forEachFunc(string(k), v)
+			return forEachFunc(pluginBkt, string(k), v)
 		})
 		if err != nil {
 			return err
