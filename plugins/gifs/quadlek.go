@@ -42,7 +42,7 @@ func saveAlias(bkt *bolt.Bucket, alias *v1.Alias) error {
 		return err
 	}
 
-	err = bkt.Put([]byte(fmt.Sprintf("alias:%s", alias.Phrase)), out)
+	err = bkt.Put([]byte(getAliasName(alias.Phrase)), out)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func saveAlias(bkt *bolt.Bucket, alias *v1.Alias) error {
 }
 
 func getAlias(bkt *bolt.Bucket, phrase string) (*v1.Alias, bool, error) {
-	out := bkt.Get([]byte(fmt.Sprintf("alias:%s", phrase)))
+	out := bkt.Get(getAliasName(phrase))
 
 	if out == nil {
 		return nil, false, nil
@@ -75,30 +75,31 @@ func parseAlias(b []byte) (*v1.Alias, error) {
 }
 
 func diffAppendReply(newReply *v1.Reply, replies []*v1.Reply) []*v1.Reply {
-	rMap := make(map[*v1.Reply]struct{}, len(replies))
+	rMap := make(map[string]*v1.Reply, len(replies))
+	rMap[newReply.Url] = newReply
 	for _, r := range replies {
-		rMap[r] = struct{}{}
+		rMap[r.Url] = r
 	}
 
 	rv := make([]*v1.Reply, 0, len(replies))
-	for r := range rMap {
+	for _, r := range rMap {
 		rv = append(rv, r)
 	}
 
 	return rv
 }
 
-func removeReply(reply *v1.Reply, replies []*v1.Reply) []*v1.Reply {
-	rv := make([]*v1.Reply, 0, len(replies))
-	for _, r := range replies {
-		if r.Url == reply.Url {
-			continue
-		}
-		rv = append(rv, r)
-	}
-
-	return rv
-}
+//func removeReply(reply *v1.Reply, replies []*v1.Reply) []*v1.Reply {
+//	rv := make([]*v1.Reply, 0, len(replies))
+//	for _, r := range replies {
+//		if r.Url == reply.Url {
+//			continue
+//		}
+//		rv = append(rv, r)
+//	}
+//
+//	return rv
+//}
 
 func replyMatch(url string, replies []*v1.Reply) bool {
 	for _, r := range replies {
@@ -118,13 +119,16 @@ func getAliasName(phrase string) []byte {
 //	return bkt.Delete(getAliasName(phrase))
 //}
 
-func appendUrl(bkt *bolt.Bucket, phrase string, url string, block bool) error {
+func appendUrl(bkt *bolt.Bucket, phrase string, url string, block bool, forceNew bool) error {
 	var alias *v1.Alias
 	var ok bool
 	var err error
-	alias, ok, err = getAlias(bkt, phrase)
-	if err != nil {
-		return err
+
+	if !forceNew {
+		alias, ok, err = getAlias(bkt, phrase)
+		if err != nil {
+			return err
+		}
 	}
 
 	reply := newReply(phrase, url)
@@ -136,16 +140,18 @@ func appendUrl(bkt *bolt.Bucket, phrase string, url string, block bool) error {
 			alias.Allowed = diffAppendReply(reply, alias.Allowed)
 		}
 	} else {
-		alias = &v1.Alias{}
+		alias = &v1.Alias{
+			Phrase: phrase,
+		}
 		if block {
 			alias.Blocked = diffAppendReply(reply, alias.Blocked)
 		} else {
 			alias.Allowed = diffAppendReply(reply, alias.Allowed)
 		}
-		err = saveAlias(bkt, alias)
-		if err != nil {
-			return err
-		}
+	}
+	err = saveAlias(bkt, alias)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -186,7 +192,7 @@ func appendUrl(bkt *bolt.Bucket, phrase string, url string, block bool) error {
 
 func gifLoad(bot *quadlek.Bot, store *quadlek.Store) error {
 	migrated := false
-	err := store.Get("v2Migration", func(b []byte) error {
+	err := store.Get("meta:v2Migration", func(b []byte) error {
 		if b != nil {
 			migrated = true
 			return nil
@@ -199,8 +205,8 @@ func gifLoad(bot *quadlek.Bot, store *quadlek.Store) error {
 	}
 
 	err = store.ForEach(func(bkt *bolt.Bucket, key string, value []byte) error {
-		if !strings.HasPrefix(key, "url:") && !strings.HasPrefix(key, "alias:") {
-			err = appendUrl(bkt, string(value), key, true)
+		if !strings.HasPrefix(key, "url:") && !strings.HasPrefix(key, "alias:") && !strings.HasPrefix(key, "meta:") {
+			err = appendUrl(bkt, key, string(value), false, true)
 			if err != nil {
 				return err
 			}
@@ -215,7 +221,7 @@ func gifLoad(bot *quadlek.Bot, store *quadlek.Store) error {
 		return err
 	}
 
-	err = store.Update("v2Migration", []byte("true"))
+	err = store.Update("meta:v2Migration", []byte("true"))
 	return nil
 }
 
@@ -343,7 +349,7 @@ func gifSaveCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) 
 			phrase := strings.Join(parts[1:], " ")
 
 			err = cmdMsg.Store.UpdateRaw(func(bkt *bolt.Bucket) error {
-				return appendUrl(bkt, phrase, gUrl.String(), false)
+				return appendUrl(bkt, phrase, gUrl.String(), false, false)
 			})
 			if err != nil {
 				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
@@ -370,33 +376,32 @@ func gifListCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) 
 		case cmdMsg := <-cmdChannel:
 			sb := &strings.Builder{}
 			err := cmdMsg.Store.ForEach(func(_ *bolt.Bucket, key string, value []byte) error {
+				if len(value) == 0 {
+					return nil
+				}
+
 				if !strings.HasPrefix(key, "alias:") {
 					return nil
 				}
+
 				a, err := parseAlias(value)
 				if err != nil {
 					return err
 				}
 
 				fmt.Fprintf(sb, "%s =>\n", a.Phrase)
-				//if len(a.Allowed) > 0 {
-				//	fmt.Fprintf(sb, "\tAllowed:\n")
-				//	for _, r := range a.Allowed {
-				//		fmt.Fprintf(sb, "\t\t%s\n", r.Url)
-				//	}
-				//}
-				//if len(a.Allowed) > 0 {
-				//	fmt.Fprintf(sb, "\tAllowed:\n")
-				//	for _, r := range a.Allowed {
-				//		fmt.Fprintf(sb, "\t\t%s\n", r.Url)
-				//	}
-				//}
-				//if len(a.Blocked) > 0 {
-				//	fmt.Fprintf(sb, "\tBlocked:\n")
-				//	for _, r := range a.Blocked {
-				//		fmt.Fprintf(sb, "\t\t%s\n", r.Url)
-				//	}
-				//}
+				if len(a.Allowed) > 0 {
+					fmt.Fprintf(sb, "\tAllowed:\n")
+					for _, r := range a.Allowed {
+						fmt.Fprintf(sb, "\t\t%s\n", r.Url)
+					}
+				}
+				if len(a.Blocked) > 0 {
+					fmt.Fprintf(sb, "\tBlocked:\n")
+					for _, r := range a.Blocked {
+						fmt.Fprintf(sb, "\t\t%s\n", r.Url)
+					}
+				}
 				if err != nil {
 					return err
 				}
@@ -405,9 +410,12 @@ func gifListCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) 
 			if err != nil {
 				continue
 			}
-			cmdMsg.Command.Reply() <- &quadlek.CommandResp{
-				Text:      sb.String(),
-				InChannel: false,
+
+			if sb.Len() > 0 {
+				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+					Text:      sb.String(),
+					InChannel: false,
+				}
 			}
 
 		case <-ctx.Done():
@@ -441,7 +449,7 @@ func gifReaction(ctx context.Context, reactionChannel <-chan *quadlek.ReactionHo
 						return nil
 					}
 
-					err = appendUrl(bkt, string(b), gifUrl, false)
+					err = appendUrl(bkt, string(b), gifUrl, false, false)
 					if err != nil {
 						return err
 					}
@@ -473,7 +481,7 @@ func gifReaction(ctx context.Context, reactionChannel <-chan *quadlek.ReactionHo
 						return nil
 					}
 
-					err = appendUrl(bkt, string(b), gifUrl, true)
+					err = appendUrl(bkt, string(b), gifUrl, true, false)
 					if err != nil {
 						return err
 					}
@@ -507,6 +515,6 @@ func Register(apiKey string) quadlek.Plugin {
 			quadlek.MakeReactionHook(gifReaction),
 		},
 		nil,
-		nil,
+		gifLoad,
 	)
 }
