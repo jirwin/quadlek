@@ -13,6 +13,7 @@ require (
 	github.com/peterhellberg/giphy v0.0.0-20220111102515-dcc13c187a93
 	github.com/purdyk/tvdb v0.0.0-20170517053125-80f06ad52285
 	github.com/satori/go.uuid v1.2.0
+	github.com/segmentio/fasthash v1.0.3
 	github.com/slack-go/slack v0.11.0
 	github.com/zmb3/spotify v1.3.0
 	go.uber.org/zap v1.21.0

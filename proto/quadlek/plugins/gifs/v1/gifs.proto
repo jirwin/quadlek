@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = "github.com/jirwin/quadlek/pb/plugins/gifs/v1";
+package quadlek.plugins.gifs.v1;
+
+message Alias {
+    string phrase = 1;
+    repeated Reply allowed = 2;
+    repeated Reply blocked = 3;
+}
+
+message Reply {
+    string phrase = 1;
+    int64 timestamp = 3;
+    string url = 4;
+}
