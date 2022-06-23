@@ -115,10 +115,6 @@ func getAliasName(phrase string) []byte {
 	return []byte(fmt.Sprintf("alias:%d", fnv1a.HashString64(phrase)))
 }
 
-//func clearAlias(bkt *bolt.Bucket, phrase string) error {
-//	return bkt.Delete(getAliasName(phrase))
-//}
-
 func appendUrl(bkt *bolt.Bucket, phrase string, url string, block bool, forceNew bool) error {
 	var alias *v1.Alias
 	var ok bool
@@ -156,39 +152,6 @@ func appendUrl(bkt *bolt.Bucket, phrase string, url string, block bool, forceNew
 
 	return nil
 }
-
-//func removeUrl(bkt *bolt.Bucket, phrase string, url string, block bool) error {
-//	var alias *v1.Alias
-//	var ok bool
-//	var err error
-//	alias, ok, err = getAlias(bkt, phrase)
-//	if err != nil {
-//		return err
-//	}
-//
-//	reply := newReply(phrase, url)
-//
-//	if ok {
-//		if block {
-//			alias.Blocked = removeReply(reply, alias.Blocked)
-//		} else {
-//			alias.Allowed = removeReply(reply, alias.Allowed)
-//		}
-//	} else {
-//		alias = &v1.Alias{}
-//		if block {
-//			alias.Blocked = removeReply(reply, alias.Blocked)
-//		} else {
-//			alias.Allowed = removeReply(reply, alias.Allowed)
-//		}
-//		err = saveAlias(bkt, alias)
-//		if err != nil {
-//			return err
-//		}
-//	}
-//
-//	return nil
-//}
 
 func gifLoad(bot *quadlek.Bot, store *quadlek.Store) error {
 	migrated := false
