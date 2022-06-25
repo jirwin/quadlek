@@ -2,7 +2,6 @@ package admin
 
 import (
 	"context"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jirwin/quadlek/quadlek"
 	"github.com/slack-go/slack"
 	"go.uber.org/zap"
@@ -24,39 +23,54 @@ func shutdown(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	}
 }
 
-func restartInteraction(ctx context.Context, shortcutChannel <-chan *quadlek.InteractionMsg) {
+func restartInteraction(ctx context.Context, interactionChannel <-chan *quadlek.InteractionMsg) {
 	for {
 		select {
-		case scMsg := <-shortcutChannel:
-			r := slack.ModalViewRequest{
-				Type: "modal",
-				Title: &slack.TextBlockObject{
-					Type: "plain_text",
-					Text: "Restart Quadlek",
-				},
-				Blocks: slack.Blocks{
-					BlockSet: []slack.Block{
-						&slack.SectionBlock{
-							Type: "plain_text",
-							Text: &slack.TextBlockObject{
-								Type: "plain_text",
-								Text: "Are you sure you'd like to restart quadlek?",
+		case scMsg := <-interactionChannel:
+			callbackID := ""
+
+			switch scMsg.Interaction.Type {
+			case "view_submission":
+				callbackID = scMsg.Interaction.View.CallbackID
+			default:
+				callbackID = scMsg.Interaction.CallbackID
+			}
+
+			switch callbackID {
+			case "restart":
+				r := slack.ModalViewRequest{
+					Type: "modal",
+					Title: &slack.TextBlockObject{
+						Type: "plain_text",
+						Text: "Restart Quadlek",
+					},
+					Blocks: slack.Blocks{
+						BlockSet: []slack.Block{
+							&slack.SectionBlock{
+								Type: "section",
+								Text: &slack.TextBlockObject{
+									Type: "plain_text",
+									Text: "Are you sure you'd like to restart quadlek?",
+								},
 							},
 						},
 					},
-				},
-				Submit: &slack.TextBlockObject{
-					Type: "plain_text",
-					Text: "Confirm",
-				},
-				CallbackID: "restart-confirm-modal",
+					Submit: &slack.TextBlockObject{
+						Type: "plain_text",
+						Text: "Confirm",
+					},
+					CallbackID: "restart-confirm-modal",
+				}
+				_, err := scMsg.Bot.OpenView(scMsg.Interaction.TriggerID, r)
+				if err != nil {
+					zap.L().Error("error opening view", zap.Error(err))
+					continue
+				}
+
+			case "restart-confirm-modal":
+				zap.L().Info("shutting down...")
+				scMsg.Bot.Stop()
 			}
-			resp, err := scMsg.Bot.OpenView(scMsg.Interaction.TriggerID, r)
-			if err != nil {
-				zap.L().Error("error opening view", zap.Error(err))
-				continue
-			}
-			spew.Dump("***view response", resp)
 
 		case <-ctx.Done():
 			zap.L().Info("Exiting quit command.")

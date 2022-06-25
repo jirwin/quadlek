@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/slack-go/slack"
 	"io/ioutil"
 	"net/http"
@@ -48,23 +47,6 @@ type slashCommand struct {
 // Reply returns the channel to write command responses to.
 func (sc *slashCommand) Reply() chan<- *CommandResp {
 	return sc.responseChan
-}
-
-type interactionPayload struct {
-	Type     string `json:"type"`
-	Token    string `json:"token"`
-	ActionTs string `json:"action_ts"`
-	Team     struct {
-		Id     string `json:"id"`
-		Domain string `json:"domain"`
-	} `json:"team"`
-	User struct {
-		Id       string `json:"id"`
-		Username string `json:"username"`
-		TeamId   string `json:"team_id"`
-	} `json:"user"`
-	CallbackId string `json:"callback_id"`
-	TriggerId  string `json:"trigger_id"`
 }
 
 // slashCommandErrorResponse is used to return an error to the user when a slash command can't be completed successfully
@@ -149,7 +131,7 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 }
 
 func ok(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusInternalServerError)
+	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte{})
 }
 
@@ -175,8 +157,6 @@ func (b *Bot) handleSlackInteraction(w http.ResponseWriter, r *http.Request) {
 		ok(w)
 		return
 	}
-
-	spew.Dump(ev)
 
 	if ev.Type == "" {
 		b.Log.Error("missing interaction type")

@@ -579,7 +579,15 @@ func (b *Bot) dispatchCommand(slashCmd *slashCommand) {
 
 // dispatchWebhook parses an incoming webhook and sends it to the plugin it is registered to
 func (b *Bot) dispatchInteraction(cb *slack.InteractionCallback) {
-	ic := b.GetInteraction(cb.CallbackID)
+	callbackID := ""
+	switch cb.Type {
+	case "view_submission":
+		callbackID = cb.View.CallbackID
+	default:
+		callbackID = cb.CallbackID
+	}
+
+	ic := b.GetInteraction(callbackID)
 	if ic == nil {
 		return
 	}

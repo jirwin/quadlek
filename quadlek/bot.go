@@ -139,8 +139,7 @@ func (b *Bot) OpenView(triggerID string, response slack.ModalViewRequest) (*slac
 }
 
 // React attaches an emojii reaction to a message.
-// Reactions are formatted like:
-//  :+1:
+// Reactions are formatted like: :+1:
 func (b *Bot) React(msg *slack.Msg, reaction string) {
 	b.api.AddReaction(reaction, slack.NewRefToMessage(msg.Channel, msg.Timestamp)) //nolint:errcheck
 }
@@ -231,6 +230,24 @@ func (b *Bot) Stop() {
 		b.db.Close()
 	}
 }
+
+// Http wrapper for debugging slack API requests
+//type sniffingClient struct{}
+//
+//func (c *sniffingClient) Do(req *http.Request) (*http.Response, error) {
+//	client := &http.Client{}
+//	r, e := client.Do(req)
+//	if r != nil {
+//		data, _ := ioutil.ReadAll(r.Body)
+//		r.Body.Close()
+//		buffer := bytes.NewBuffer(data)
+//
+//		r.Body = ioutil.NopCloser(buffer)
+//
+//		fmt.Println(string(data))
+//	}
+//	return r, e
+//}
 
 // NewBot creates a new instance of Bot for use.
 //
