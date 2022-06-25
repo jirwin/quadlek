@@ -51,7 +51,7 @@ func load(consumerKey, consumerSecret, accessToken, accessSecret string, filter 
 								continue
 							}
 						}
-						twitterUrl := fmt.Sprintf("https://nitter.quadlek.dev/%s/status/%s", m.User.ScreenName, m.IDStr)
+						twitterUrl := fmt.Sprintf("https://twitter.com/%s/status/%s", m.User.ScreenName, m.IDStr)
 						chanId, err := bot.GetChannelId(channel)
 						if err != nil {
 							zap.L().Error("unable to find channel.", zap.Error(err))
