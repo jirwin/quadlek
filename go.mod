@@ -24,6 +24,7 @@ require (
 
 require (
 	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dghubble/sling v1.4.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect

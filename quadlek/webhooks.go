@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/slack-go/slack"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -46,6 +48,23 @@ type slashCommand struct {
 // Reply returns the channel to write command responses to.
 func (sc *slashCommand) Reply() chan<- *CommandResp {
 	return sc.responseChan
+}
+
+type interactionPayload struct {
+	Type     string `json:"type"`
+	Token    string `json:"token"`
+	ActionTs string `json:"action_ts"`
+	Team     struct {
+		Id     string `json:"id"`
+		Domain string `json:"domain"`
+	} `json:"team"`
+	User struct {
+		Id       string `json:"id"`
+		Username string `json:"username"`
+		TeamId   string `json:"team_id"`
+	} `json:"user"`
+	CallbackId string `json:"callback_id"`
+	TriggerId  string `json:"trigger_id"`
 }
 
 // slashCommandErrorResponse is used to return an error to the user when a slash command can't be completed successfully
@@ -129,6 +148,47 @@ func (b *Bot) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func ok(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusInternalServerError)
+	_, _ = w.Write([]byte{})
+}
+
+func (b *Bot) handleSlackInteraction(w http.ResponseWriter, r *http.Request) {
+	err := b.ValidateSlackRequest(r)
+	if err != nil {
+		b.Log.Error("failed validating request signature")
+		generateErrorMsg(w, "Sorry. I was unable to complete your request. :cry:")
+		return
+	}
+
+	err = r.ParseForm()
+	if err != nil {
+		fmt.Println("error: ", err.Error())
+		ok(w)
+		return
+	}
+
+	ev := &slack.InteractionCallback{}
+	err = json.Unmarshal([]byte(r.Form.Get("payload")), &ev)
+	if err != nil {
+		b.Log.Error("invalid interaction json", zap.Error(err))
+		ok(w)
+		return
+	}
+
+	spew.Dump(ev)
+
+	if ev.Type == "" {
+		b.Log.Error("missing interaction type")
+		w.WriteHeader(http.StatusInternalServerError)
+		ok(w)
+		return
+	}
+
+	b.interactionChannel <- ev
+	ok(w)
+}
+
 // handlePluginWebhook is an http handler that dispatches custom webhooks to the appropriate plugin
 func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -164,6 +224,7 @@ func (b *Bot) WebhookServer() {
 	r := mux.NewRouter()
 	r.HandleFunc("/slack/command", b.handleSlackCommand).Methods("POST")
 	r.HandleFunc("/slack/plugin/{webhook-name}", b.handlePluginWebhook).Methods("GET", "POST", "DELETE", "PUT")
+	r.HandleFunc("/slack/interaction", b.handleSlackInteraction).Methods("POST")
 	r.HandleFunc("/slack/event", b.handleSlackEvent).Methods("POST")
 
 	// TODO(jirwin): This listen address should be configurable
@@ -211,5 +272,5 @@ func (b *Bot) ValidateSlackRequest(r *http.Request) error {
 		return nil
 	}
 
-	return errors.New("invalid request signature")
+	return InvalidRequestSignature
 }
