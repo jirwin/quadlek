@@ -39,14 +39,19 @@ func load(consumerKey, consumerSecret, accessToken, accessSecret string, filter 
 				switch m := msg.(type) {
 				case *twitter.Tweet:
 					if channel, ok := filter[m.User.IDStr]; ok {
+						if m.InReplyToStatusIDStr != "" {
+							zap.L().Info("skipping reply tweet", zap.Any("tweet", m))
+							continue
+						}
 						if m.RetweetedStatus != nil {
 							zap.L().Info("Got a tweet containing a retweet", zap.Any("tweet", m))
+
 							if replyChannel, ok := filter[m.RetweetedStatus.User.IDStr]; ok && channel == replyChannel {
 								zap.L().Info("Tweet contains retweet from already monitored account, cancelling message", zap.Any("tweet", m))
 								continue
 							}
 						}
-						twitterUrl := fmt.Sprintf("https://twitter.com/%s/status/%s", m.User.ScreenName, m.IDStr)
+						twitterUrl := fmt.Sprintf("https://nitter.quadlek.dev/%s/status/%s", m.User.ScreenName, m.IDStr)
 						chanId, err := bot.GetChannelId(channel)
 						if err != nil {
 							zap.L().Error("unable to find channel.", zap.Error(err))
