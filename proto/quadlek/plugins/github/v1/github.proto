@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/jirwin/quadlek/pb/plugins/github/v1";
+option go_package = "github.com/jirwin/pkg/pb/plugins/github/v1";
 package quadlek.plugins.github.v1;
 
 message AuthState {

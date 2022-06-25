@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/jirwin/quadlek/pb/plugins/spotify/v1";
+option go_package = "github.com/jirwin/pkg/pb/plugins/spotify/v1";
 package quadlek.plugins.spotify.v1;
 
 message AuthState {
