@@ -7,6 +7,7 @@ require (
 	github.com/dghubble/go-twitter v0.0.0-20220608135633-47eb18e5aab5
 	github.com/dghubble/oauth1 v0.7.1
 	github.com/google/go-github v17.0.0+incompatible
+	github.com/google/wire v0.5.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.2.0
 	github.com/jirwin/comics v0.0.0-20180408212830-43822d8acb7c

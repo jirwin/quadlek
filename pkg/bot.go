@@ -227,24 +227,6 @@ func (b *Bot) Stop() {
 	}
 }
 
-// Http wrapper for debugging slack API requests
-//type sniffingClient struct{}
-//
-//func (c *sniffingClient) Do(req *http.Request) (*http.Response, error) {
-//	client := &http.Client{}
-//	r, e := client.Do(req)
-//	if r != nil {
-//		data, _ := ioutil.ReadAll(r.Body)
-//		r.Body.Close()
-//		buffer := bytes.NewBuffer(data)
-//
-//		r.Body = ioutil.NopCloser(buffer)
-//
-//		fmt.Println(string(data))
-//	}
-//	return r, e
-//}
-
 // NewBot creates a new instance of Bot for use.
 //
 // apiKey is the Slack API key that the Bot should use to authenticate
