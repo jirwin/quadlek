@@ -77,6 +77,58 @@ type CommandResp struct {
 	InChannel    bool               `json:"-"`
 }
 
+// Interaction is the interface that plugins implement for slash Shortcuts.
+// Slash Shortcuts are actively triggered by users in slack, and only receive messages when they are invoked.
+type Interaction interface {
+	GetName() string
+	Channel() chan<- *InteractionMsg
+	Run(ctx context.Context)
+}
+
+// registeredInteraction is a struct used internally to represent a Interaction that a plugin has registered
+type registeredInteraction struct {
+	PluginId    string
+	Interaction Interaction
+}
+
+// interaction is a an implementation of the Interaction interface
+type interaction struct {
+	name    string
+	channel chan *InteractionMsg
+	runFunc func(ctx context.Context, interactionChan <-chan *InteractionMsg)
+}
+
+// GetName returns the name of the Interaction. This name should match the slash Interaction configured in slack.
+func (c *interaction) GetName() string {
+	return c.name
+}
+
+// Channel returns the channel that the Bot will write incoming slash Interaction messages to
+func (c *interaction) Channel() chan<- *InteractionMsg {
+	return c.channel
+}
+
+// Run executes the Shortcuts runFunc with the provided context
+func (c *interaction) Run(ctx context.Context) {
+	c.runFunc(ctx, c.channel)
+}
+
+// MakeInteraction is a helper function that accepts a name and a runFunc, and returns a Interaction.
+func MakeInteraction(name string, runFn func(ctx context.Context, cmdChan <-chan *InteractionMsg)) Interaction {
+	return &interaction{
+		name:    name,
+		runFunc: runFn,
+		channel: make(chan *InteractionMsg),
+	}
+}
+
+// InteractionMsg is the struct that is passed to a Shortcuts channel as it is activated.
+type InteractionMsg struct {
+	Bot         *Bot
+	Interaction *slack.InteractionCallback
+	Store       *Store
+}
+
 // Hook is the interface that a plugin can implement to create a hook.
 //
 // Hooks receive every message that the Bot sees so plugins can react accordingly.
@@ -222,11 +274,33 @@ func MakeWebhook(name string, runFunc func(ctx context.Context, whChan <-chan *W
 // Plugin is the interface to implement a plugin
 type Plugin interface {
 	GetId() string
+}
+
+type CommandPlugin interface {
+	Plugin
 	GetCommands() []Command
+}
+
+type HookPlugin interface {
+	Plugin
 	GetHooks() []Hook
+}
+type WebhookPlugin interface {
+	Plugin
 	GetWebhooks() []Webhook
+}
+type ReactionHookPlugin interface {
+	Plugin
 	GetReactionHooks() []ReactionHook
+}
+type LoadPlugin interface {
+	Plugin
 	Load(bot *Bot, store *Store) error
+}
+
+type InteractionPlugin interface {
+	GetId() string
+	GetInteractions() []Interaction
 }
 
 // loadPluginFn is used to do any initialization work when the plugin is loaded
@@ -290,6 +364,30 @@ func MakePlugin(id string, commands []Command, hooks []Hook, reactionHooks []Rea
 	}
 }
 
+// plugin is an internal implementation of Plugin
+type interactionPlugin struct {
+	id           string
+	interactions []Interaction
+}
+
+// GetId returns the id set by the plugin. This should be unique across plugins.
+func (p *interactionPlugin) GetId() string {
+	return p.id
+}
+
+// GetCommands returns all of the commands registered with the plugin.
+func (p *interactionPlugin) GetInteractions() []Interaction {
+	return p.interactions
+}
+
+// MakePlugin is a helper function that returns a Plugin.
+func MakeInteractionPlugin(id string, plugins []Interaction) InteractionPlugin {
+	return &interactionPlugin{
+		id:           id,
+		interactions: plugins,
+	}
+}
+
 // MsgToBot returns true if the message was intended for the Bot
 func (b *Bot) MsgToBot(msg string) bool {
 	return strings.HasPrefix(msg, fmt.Sprintf("<@%s> ", b.userId))
@@ -321,6 +419,21 @@ func (b *Bot) GetWebhook(name string) *registeredWebhook {
 	return nil
 }
 
+// GetWebhook returns the registeredWebhook for the given webhook name
+func (b *Bot) GetInteraction(callbackID string) *registeredInteraction {
+	if callbackID == "" {
+		return nil
+	}
+
+	callbackParts := strings.Split(callbackID, "-")
+
+	if wh, ok := b.interactions[callbackParts[0]]; ok {
+		return wh
+	}
+
+	return nil
+}
+
 // getStore returns the database handle for the given pluginId
 func (b *Bot) getStore(pluginId string) *Store {
 	return &Store{
@@ -330,7 +443,16 @@ func (b *Bot) getStore(pluginId string) *Store {
 }
 
 // RegisterPlugin registers the given Plugin with the Bot.
-func (b *Bot) RegisterPlugin(plugin Plugin) error {
+func (b *Bot) RegisterPlugin(p interface{}) error {
+	if p == nil {
+		return fmt.Errorf("invalid plugin")
+	}
+
+	plugin, ok := p.(Plugin)
+	if !ok {
+		return errors.New("invalid plugin")
+	}
+
 	if plugin.GetId() == "" {
 		return errors.New("Must provide a unique plugin id.")
 	}
@@ -340,69 +462,97 @@ func (b *Bot) RegisterPlugin(plugin Plugin) error {
 		return err
 	}
 
-	err = plugin.Load(b, b.getStore(plugin.GetId()))
-	if err != nil {
-		return err
+	if lp, ok := plugin.(LoadPlugin); ok {
+		err = lp.Load(b, b.getStore(lp.GetId()))
+		if err != nil {
+			return err
+		}
 	}
 
-	for _, command := range plugin.GetCommands() {
-		_, ok := b.commands[command.GetName()]
-		if ok {
-			return fmt.Errorf("Command already exists: %s", command.GetName())
-		}
-		b.commands[command.GetName()] = &registeredCommand{
-			PluginId: plugin.GetId(),
-			Command:  command,
-		}
-		b.wg.Add(1)
-		go func(c Command) {
-			defer b.wg.Done()
+	if cp, ok := plugin.(CommandPlugin); ok {
+		for _, command := range cp.GetCommands() {
+			_, ok := b.commands[command.GetName()]
+			if ok {
+				return fmt.Errorf("Command already exists: %s", command.GetName())
+			}
+			b.commands[command.GetName()] = &registeredCommand{
+				PluginId: cp.GetId(),
+				Command:  command,
+			}
+			b.wg.Add(1)
+			go func(c Command) {
+				defer b.wg.Done()
 
-			c.Run(b.ctx)
-		}(command)
+				c.Run(b.ctx)
+			}(command)
+		}
 	}
 
-	for _, hook := range plugin.GetHooks() {
-		b.hooks = append(b.hooks, &registeredHook{
-			PluginId: plugin.GetId(),
-			Hook:     hook,
-		})
-		b.wg.Add(1)
-		go func(h Hook) {
-			defer b.wg.Done()
+	if hp, ok := plugin.(HookPlugin); ok {
+		for _, hook := range hp.GetHooks() {
+			b.hooks = append(b.hooks, &registeredHook{
+				PluginId: hp.GetId(),
+				Hook:     hook,
+			})
+			b.wg.Add(1)
+			go func(h Hook) {
+				defer b.wg.Done()
 
-			h.Run(b.ctx)
-		}(hook)
+				h.Run(b.ctx)
+			}(hook)
+		}
 	}
 
-	for _, reactionHook := range plugin.GetReactionHooks() {
-		b.reactionHooks = append(b.reactionHooks, &registeredReactionHook{
-			PluginId:     plugin.GetId(),
-			ReactionHook: reactionHook,
-		})
-		b.wg.Add(1)
-		go func(r ReactionHook) {
-			defer b.wg.Done()
+	if rp, ok := plugin.(ReactionHookPlugin); ok {
+		for _, reactionHook := range rp.GetReactionHooks() {
+			b.reactionHooks = append(b.reactionHooks, &registeredReactionHook{
+				PluginId:     rp.GetId(),
+				ReactionHook: reactionHook,
+			})
+			b.wg.Add(1)
+			go func(r ReactionHook) {
+				defer b.wg.Done()
 
-			r.Run(b.ctx)
-		}(reactionHook)
+				r.Run(b.ctx)
+			}(reactionHook)
+		}
 	}
 
-	for _, webhook := range plugin.GetWebhooks() {
-		_, ok := b.webhooks[webhook.GetName()]
-		if ok {
-			return fmt.Errorf("Webhook already exists: %s", webhook.GetName())
-		}
-		b.webhooks[webhook.GetName()] = &registeredWebhook{
-			PluginId: plugin.GetId(),
-			Webhook:  webhook,
-		}
-		b.wg.Add(1)
-		go func(wh Webhook) {
-			defer b.wg.Done()
+	if wp, ok := plugin.(WebhookPlugin); ok {
+		for _, wHook := range wp.GetWebhooks() {
+			_, ok := b.webhooks[wHook.GetName()]
+			if ok {
+				return fmt.Errorf("Webhook already exists: %s", wHook.GetName())
+			}
+			b.webhooks[wHook.GetName()] = &registeredWebhook{
+				PluginId: wp.GetId(),
+				Webhook:  wHook,
+			}
+			b.wg.Add(1)
+			go func(wh Webhook) {
+				defer b.wg.Done()
 
-			wh.Run(b.ctx)
-		}(webhook)
+				wh.Run(b.ctx)
+			}(wHook)
+		}
+	}
+
+	if ip, ok := plugin.(InteractionPlugin); ok {
+		for _, ic := range ip.GetInteractions() {
+			_, ok := b.interactions[ic.GetName()]
+			if ok {
+				return fmt.Errorf("Interaction plugin already exists:  %s", ic.GetName())
+			}
+			b.interactions[ic.GetName()] = &registeredInteraction{
+				PluginId:    ip.GetId(),
+				Interaction: ic,
+			}
+			b.wg.Add(1)
+			go func(s Interaction) {
+				defer b.wg.Done()
+				s.Run(b.ctx)
+			}(ic)
+		}
 	}
 
 	return nil
@@ -424,6 +574,28 @@ func (b *Bot) dispatchCommand(slashCmd *slashCommand) {
 		Bot:     b,
 		Command: slashCmd,
 		Store:   b.getStore(cmd.PluginId),
+	}
+}
+
+// dispatchWebhook parses an incoming webhook and sends it to the plugin it is registered to
+func (b *Bot) dispatchInteraction(cb *slack.InteractionCallback) {
+	callbackID := ""
+	switch cb.Type {
+	case "view_submission":
+		callbackID = cb.View.CallbackID
+	default:
+		callbackID = cb.CallbackID
+	}
+
+	ic := b.GetInteraction(callbackID)
+	if ic == nil {
+		return
+	}
+
+	ic.Interaction.Channel() <- &InteractionMsg{
+		Bot:         b,
+		Interaction: cb,
+		Store:       b.getStore(ic.PluginId),
 	}
 }
 

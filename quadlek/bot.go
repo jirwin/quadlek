@@ -42,6 +42,8 @@ type Bot struct {
 	cmdChannel           chan *slashCommand
 	webhooks             map[string]*registeredWebhook
 	pluginWebhookChannel chan *PluginWebhook
+	interactionChannel   chan *slack.InteractionCallback
+	interactions         map[string]*registeredInteraction
 	hooks                []*registeredHook
 	reactionHooks        []*registeredReactionHook
 	db                   *bolt.DB
@@ -126,9 +128,18 @@ func (b *Bot) Say(channel string, resp string) {
 	b.api.PostMessage(channel, slack.MsgOptionText(resp, false)) //nolint:errcheck
 }
 
+func (b *Bot) OpenView(triggerID string, response slack.ModalViewRequest) (*slack.ViewResponse, error) {
+	r, err := b.api.OpenView(triggerID, response)
+	if err != nil {
+		b.Log.Error("error opening view", zap.Error(err))
+		return nil, err
+	}
+
+	return r, nil
+}
+
 // React attaches an emojii reaction to a message.
-// Reactions are formatted like:
-//  :+1:
+// Reactions are formatted like: :+1:
 func (b *Bot) React(msg *slack.Msg, reaction string) {
 	b.api.AddReaction(reaction, slack.NewRefToMessage(msg.Channel, msg.Timestamp)) //nolint:errcheck
 }
@@ -190,9 +201,12 @@ func (b *Bot) handleEvents() {
 			b.dispatchCommand(slashCmd)
 
 		// Custom webhook
-		case webhook := <-b.pluginWebhookChannel:
-			b.dispatchWebhook(webhook)
+		case wh := <-b.pluginWebhookChannel:
+			b.dispatchWebhook(wh)
 
+		// Interaction
+		case ic := <-b.interactionChannel:
+			b.dispatchInteraction(ic)
 		}
 	}
 }
@@ -216,6 +230,24 @@ func (b *Bot) Stop() {
 		b.db.Close()
 	}
 }
+
+// Http wrapper for debugging slack API requests
+//type sniffingClient struct{}
+//
+//func (c *sniffingClient) Do(req *http.Request) (*http.Response, error) {
+//	client := &http.Client{}
+//	r, e := client.Do(req)
+//	if r != nil {
+//		data, _ := ioutil.ReadAll(r.Body)
+//		r.Body.Close()
+//		buffer := bytes.NewBuffer(data)
+//
+//		r.Body = ioutil.NopCloser(buffer)
+//
+//		fmt.Println(string(data))
+//	}
+//	return r, e
+//}
 
 // NewBot creates a new instance of Bot for use.
 //
@@ -255,6 +287,8 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 		cmdChannel:           make(chan *slashCommand),
 		webhooks:             make(map[string]*registeredWebhook),
 		pluginWebhookChannel: make(chan *PluginWebhook),
+		interactionChannel:   make(chan *slack.InteractionCallback),
+		interactions:         make(map[string]*registeredInteraction),
 		reactionHooks:        []*registeredReactionHook{},
 		hooks:                []*registeredHook{},
 		db:                   db,
