@@ -24,7 +24,7 @@ type MessageLotOpts struct {
 	SkipAttachments bool
 }
 
-// GetMessageLog uses channel and a set of options to get historical messages from the Slack API.
+// GetMessageLog uses channel and a set of options to get historical messages from the SlackManager API.
 func (b *Bot) GetMessageLog(channel string, opts MessageLotOpts) ([]slack.Message, error) {
 	params := &slack.GetConversationHistoryParameters{}
 	if opts.Count != 0 {

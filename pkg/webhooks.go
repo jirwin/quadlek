@@ -29,7 +29,7 @@ type PluginWebhook struct {
 	ResponseWriter http.ResponseWriter
 }
 
-// slashCommand is an internal object that parses slash command webhooks coming from the Slack servers
+// slashCommand is an internal object that parses slash command webhooks coming from the SlackManager servers
 type slashCommand struct {
 	Token        string            `schema:"token"`
 	TeamId       string            `schema:"team_id"`
@@ -197,7 +197,7 @@ func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 // WebhookServer starts a new http server that listens and responds to incoming webhooks.
-// The Slack API uses webhooks for processing slash commands, and this server is used to respond to them.
+// The SlackManager API uses webhooks for processing slash commands, and this server is used to respond to them.
 // Plugins can also register custom webhooks that can be used however they choose. An example of this would be
 // to process oauth2 callbacks to facilitate oauth2 flows for associating a user's slack account with an external service.
 func (b *Bot) WebhookServer() {
@@ -239,8 +239,8 @@ func (b *Bot) ValidateSlackRequest(r *http.Request) error {
 	rBody := ioutil.NopCloser(bytes.NewBuffer(body))
 	r.Body = rBody
 
-	ts := r.Header.Get("X-Slack-Request-Timestamp")
-	signature := r.Header.Get("X-Slack-Signature")
+	ts := r.Header.Get("X-SlackManager-Request-Timestamp")
+	signature := r.Header.Get("X-SlackManager-Signature")
 
 	msg := fmt.Sprintf("v0:%s:%s", ts, body)
 	key := []byte(b.verificationToken)

@@ -11,10 +11,10 @@ func NewConfig() (Config, error) {
 	return c, nil
 }
 
-type PluginManager interface {
+type Manager interface {
 }
 
-type Manager struct {
+type ManagerImpl struct {
 	C Config
 	L *zap.Logger
 }

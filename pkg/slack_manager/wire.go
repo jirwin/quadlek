@@ -1,4 +1,4 @@
-package webhook_server
+package slack_manager
 
 import "github.com/google/wire"
 

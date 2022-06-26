@@ -11,28 +11,41 @@ import (
 	"github.com/jirwin/quadlek/pkg/bot"
 	"github.com/jirwin/quadlek/pkg/data_store/boltdb"
 	"github.com/jirwin/quadlek/pkg/plugin_manager"
-	"github.com/jirwin/quadlek/pkg/slack"
+	"github.com/jirwin/quadlek/pkg/slack_manager"
+	"github.com/jirwin/quadlek/pkg/slack_manager/client"
 	"github.com/jirwin/quadlek/pkg/uzap"
-	"github.com/jirwin/quadlek/pkg/webhook_server"
+	"github.com/jirwin/quadlek/pkg/webhook_manager"
 )
 
 // Injectors from wire.go:
 
 func NewQuadlek(ctx context.Context) (*bot.QuadlekBot, error) {
-	config, err := uzap.NewConfig()
+	config, err := bot.NewConfig()
 	if err != nil {
 		return nil, err
 	}
-	logger, err := uzap.New(config)
+	uzapConfig, err := uzap.NewConfig()
 	if err != nil {
 		return nil, err
 	}
-	slackConfig, err := slack.NewConfig()
+	logger, err := uzap.New(uzapConfig)
 	if err != nil {
 		return nil, err
 	}
-	slackHttpClient := &slack.slackHttpClient{}
-	slackClient, err := slack.NewSlackClient(slackConfig, slackHttpClient)
+	slack_managerConfig, err := slack_manager.NewConfig()
+	if err != nil {
+		return nil, err
+	}
+	clientConfig, err := client.NewConfig()
+	if err != nil {
+		return nil, err
+	}
+	slackHttpClient := &client.slackHttpClient{}
+	slackClientImpl, err := client.NewSlackClient(clientConfig, logger, slackHttpClient)
+	if err != nil {
+		return nil, err
+	}
+	managerImpl, err := slack_manager.New(logger, slack_managerConfig, slackClientImpl)
 	if err != nil {
 		return nil, err
 	}
@@ -40,19 +53,15 @@ func NewQuadlek(ctx context.Context) (*bot.QuadlekBot, error) {
 	if err != nil {
 		return nil, err
 	}
-	manager := &plugin_manager.Manager{
+	plugin_managerManagerImpl := &plugin_manager.ManagerImpl{
 		C: plugin_managerConfig,
 		L: logger,
 	}
-	webhook_serverConfig, err := webhook_server.NewConfig()
+	webhook_managerConfig, err := webhook_manager.NewConfig()
 	if err != nil {
 		return nil, err
 	}
-	server, err := webhook_server.New(webhook_serverConfig, logger, manager)
-	if err != nil {
-		return nil, err
-	}
-	botConfig, err := bot.NewConfig()
+	webhook_managerManagerImpl, err := webhook_manager.New(webhook_managerConfig, logger, plugin_managerManagerImpl)
 	if err != nil {
 		return nil, err
 	}
@@ -64,13 +73,9 @@ func NewQuadlek(ctx context.Context) (*bot.QuadlekBot, error) {
 	if err != nil {
 		return nil, err
 	}
-	quadlekBot := &bot.QuadlekBot{
-		L:             logger,
-		Slack:         slackClient,
-		PluginManager: manager,
-		WebhookServer: server,
-		C:             botConfig,
-		DataStore:     boltDbStore,
+	quadlekBot, err := bot.New(config, logger, managerImpl, plugin_managerManagerImpl, webhook_managerManagerImpl, boltDbStore)
+	if err != nil {
+		return nil, err
 	}
 	return quadlekBot, nil
 }

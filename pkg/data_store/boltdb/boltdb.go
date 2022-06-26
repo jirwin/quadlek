@@ -29,6 +29,12 @@ type BoltDbStore struct {
 	db *bolt.DB
 }
 
+func (b *BoltDbStore) Close() {
+	if b.db != nil {
+		b.db.Close()
+	}
+}
+
 func New(c Config, l *zap.Logger) (*BoltDbStore, error) {
 	b := &BoltDbStore{
 		C: c,

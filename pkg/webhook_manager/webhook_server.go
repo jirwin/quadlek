@@ -1,4 +1,4 @@
-package webhook_server
+package webhook_manager
 
 import (
 	"fmt"
@@ -12,12 +12,12 @@ type Config struct {
 	ListenAddress string
 }
 
-type WebhookServer interface{}
+type Manager interface{}
 
-type Server struct {
+type ManagerImpl struct {
 	L             *zap.Logger
 	C             Config
-	PluginManager plugin_manager.PluginManager
+	PluginManager plugin_manager.Manager
 	server        *http.Server
 }
 
@@ -33,8 +33,8 @@ func NewConfig() (Config, error) {
 	return c, nil
 }
 
-func New(c Config, l *zap.Logger, pluginManager plugin_manager.PluginManager) (*Server, error) {
-	ws := &Server{
+func New(c Config, l *zap.Logger, pluginManager plugin_manager.Manager) (*ManagerImpl, error) {
+	ws := &ManagerImpl{
 		L:             l,
 		C:             c,
 		PluginManager: pluginManager,
