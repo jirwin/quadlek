@@ -30,17 +30,31 @@ type QuadlekBot struct {
 }
 
 func (q *QuadlekBot) Start(ctx context.Context) error {
-	go q.WebhookManager.Start()
-	go q.PluginManager.Start()
+	go q.WebhookManager.Run(ctx)
+	go q.PluginManager.Start(ctx)
 
 	q.ctx, q.cancel = context.WithCancel(ctx)
 
-	err := q.SlackManager.Init()
+	err := q.SlackManager.Start(ctx)
 	if err != nil {
 		q.l.Error("error initializing slack", zap.Error(err))
 		return err
 	}
 
+	// If any of the managers stop, quit the entire bot
+	go func() {
+		select {
+		case <-q.WebhookManager.Done():
+			break
+		case <-q.SlackManager.Done():
+			break
+		case <-q.PluginManager.Done():
+			break
+		case <-q.ctx.Done():
+			break
+		}
+		q.Stop()
+	}()
 	return nil
 }
 

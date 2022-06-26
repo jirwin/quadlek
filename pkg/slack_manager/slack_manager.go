@@ -43,14 +43,16 @@ func newSlackState(userID, botID string) *slackState {
 }
 
 type Manager interface {
-	Init(ctx context.Context) error
-	UpdateUser(userID string, user slack.User)
-	UpdateChannel(channelID string, channel slack.Channel)
+	Start(ctx context.Context) error
+	Done() <-chan struct{}
+	Stop()
+	UpdateUser(user slack.User)
+	UpdateChannel(channel slack.Channel)
 	GetUserId() string
 	GetBotId() string
 	GetChannelId(chanName string) (string, error)
-	GetChannel(chanID string) (*slack.Channel, error)
-	GetUser(userID string) (*slack.User, error)
+	GetChannel(chanID string) (slack.Channel, error)
+	GetUser(userID string) (slack.User, error)
 	GetUserName(userID string) (string, error)
 	Slack() client.SlackClient
 }
@@ -60,6 +62,16 @@ type ManagerImpl struct {
 	c          Config
 	slack      client.SlackClient
 	slackState *slackState
+	ctx        context.Context
+	cancel     context.CancelFunc
+}
+
+func (m *ManagerImpl) Done() <-chan struct{} {
+	return m.ctx.Done()
+}
+
+func (m *ManagerImpl) Stop() {
+	m.cancel()
 }
 
 func (m *ManagerImpl) UpdateUser(user slack.User) {
@@ -82,8 +94,10 @@ func (m *ManagerImpl) Slack() client.SlackClient {
 	return m.slack
 }
 
-func (m *ManagerImpl) Init(ctx context.Context) error {
-	at, err := m.slack.Api().AuthTestContext(ctx)
+func (m *ManagerImpl) Start(ctx context.Context) error {
+	m.ctx, m.cancel = context.WithCancel(ctx)
+
+	at, err := m.slack.Api().AuthTestContext(m.ctx)
 	if err != nil {
 		m.l.Error("Unable to auth", zap.Error(err))
 		return err
@@ -95,7 +109,7 @@ func (m *ManagerImpl) Init(ctx context.Context) error {
 
 	pageToken := ""
 	for {
-		channels, nextPage, err := m.slack.Api().GetConversations(&slack.GetConversationsParameters{Cursor: pageToken})
+		channels, nextPage, err := m.slack.Api().GetConversationsContext(m.ctx, &slack.GetConversationsParameters{Cursor: pageToken})
 		if err != nil {
 			m.l.Error("Unable to list channels", zap.Error(err))
 			return err
@@ -110,7 +124,7 @@ func (m *ManagerImpl) Init(ctx context.Context) error {
 		pageToken = nextPage
 	}
 
-	users, err := m.slack.Api().GetUsers()
+	users, err := m.slack.Api().GetUsersContext(m.ctx)
 	if err != nil {
 		m.l.Error("Unable to list users", zap.Error(err))
 		return err
@@ -187,7 +201,7 @@ func (m *ManagerImpl) GetUser(userID string) (*slack.User, error) {
 func (m *ManagerImpl) GetUserName(userID string) (string, error) {
 	m.slackState.RLock()
 	defer m.slackState.RUnlock()
-	
+
 	user, ok := m.slackState.Users[userID]
 	if !ok {
 		return "", fmt.Errorf("User(%s) not found.", userID)

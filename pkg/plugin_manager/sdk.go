@@ -55,7 +55,7 @@ func MakeCommand(name string, runFn func(ctx context.Context, cmdChan <-chan *Co
 
 // CommandMsg is the struct that is passed to a commands channel as it is activated.
 type CommandMsg struct {
-	Bot     *Bot
+	Helper  PluginHelper
 	Command *slashCommand
 	Store   *Store
 }
@@ -115,7 +115,7 @@ func MakeInteraction(name string, runFn func(ctx context.Context, cmdChan <-chan
 
 // InteractionMsg is the struct that is passed to a Shortcuts channel as it is activated.
 type InteractionMsg struct {
-	Bot         *Bot
+	Helper      PluginHelper
 	Interaction *slack.InteractionCallback
 	Store       *Store
 }
@@ -130,9 +130,9 @@ type Hook interface {
 
 // HookMsg is the struct that is passed to a hook's channel for each message seen.
 type HookMsg struct {
-	Bot   *Bot
-	Msg   *slack.Msg
-	Store *Store
+	Helper PluginHelper
+	Msg    *slack.Msg
+	Store  *Store
 }
 
 // registeredHook is the struct used internally to represent a registered hook.
@@ -174,7 +174,7 @@ type ReactionHook interface {
 
 // ReactionHookMsg is the struct that is sent to a reaction hook when a message is reacted to.
 type ReactionHookMsg struct {
-	Bot      *Bot
+	Helper   PluginHelper
 	Reaction *slackevents.ReactionAddedEvent
 	Store    *Store
 }
@@ -218,7 +218,7 @@ type Webhook interface {
 
 // WebhookMsg is the struct that is sent to the plugin's channel
 type WebhookMsg struct {
-	Bot            *Bot
+	Helper         PluginHelper
 	Request        *http.Request
 	ResponseWriter http.ResponseWriter
 	Store          *Store
@@ -286,7 +286,7 @@ type ReactionHookPlugin interface {
 }
 type LoadPlugin interface {
 	Plugin
-	Load(bot *Bot, store *Store) error
+	Load(helper PluginHelper, store *Store) error
 }
 
 type InteractionPlugin interface {

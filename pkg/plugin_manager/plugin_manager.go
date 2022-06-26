@@ -26,6 +26,7 @@ func NewConfig() (Config, error) {
 type Manager interface {
 	Start(ctx context.Context)
 	Close()
+	Done() <-chan struct{}
 	Register(p interface{}) error
 	RespondToSlashCommand(url string, cmdResp *CommandResp) error
 }
@@ -47,6 +48,10 @@ type ManagerImpl struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	wg                   sync.WaitGroup
+}
+
+func (m *ManagerImpl) Done() <-chan struct{} {
+	return m.ctx.Done()
 }
 
 func (m *ManagerImpl) Start(ctx context.Context) {

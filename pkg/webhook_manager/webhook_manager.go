@@ -37,6 +37,7 @@ func NewConfig() (Config, error) {
 
 type Manager interface {
 	Run(ctx context.Context)
+	Done() <-chan struct{}
 	RegisterRoute(route string, f http.HandlerFunc, methods []string, validateSlack bool)
 }
 
@@ -47,10 +48,18 @@ type ManagerImpl struct {
 	server      *http.Server
 
 	router *mux.Router
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
+func (m *ManagerImpl) Done() <-chan struct{} {
+	return m.ctx.Done()
 }
 
 func (m *ManagerImpl) Run(ctx context.Context) {
 	m.server.Handler = m.router
+
+	m.ctx, m.cancel = context.WithCancel(ctx)
 
 	go func() {
 		if err := m.server.ListenAndServe(); err != nil {
@@ -58,13 +67,13 @@ func (m *ManagerImpl) Run(ctx context.Context) {
 		}
 	}()
 
-	<-ctx.Done()
+	<-m.ctx.Done()
 
 	m.l.Info("Shutting down webhook server")
 	// shut down gracefully, but wait no longer than 5 seconds before halting
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_ = m.server.Shutdown(ctx)
+	_ = m.server.Shutdown(shutdownCtx)
 	m.l.Info("Shut down webhook server")
 }
 
