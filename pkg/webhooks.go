@@ -9,15 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/slack-go/slack"
 	"io/ioutil"
 	"net/http"
 	"time"
 
-	"go.uber.org/zap"
-
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
+	"github.com/slack-go/slack"
+	"go.uber.org/zap"
 )
 
 var decoder = schema.NewDecoder()

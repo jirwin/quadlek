@@ -2,10 +2,11 @@ package boltdb
 
 import (
 	"fmt"
-	"github.com/boltdb/bolt"
-	"go.uber.org/zap"
 	"os"
 	"time"
+
+	"github.com/boltdb/bolt"
+	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -24,9 +25,19 @@ func NewConfig() (Config, error) {
 }
 
 type BoltDbStore struct {
-	C  Config
-	L  *zap.Logger
+	c  Config
+	l  *zap.Logger
 	db *bolt.DB
+}
+
+func (b *BoltDbStore) InitPluginBucket(pluginID string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (b *BoltDbStore) GetStore(pluginID string) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (b *BoltDbStore) Close() {
@@ -37,8 +48,8 @@ func (b *BoltDbStore) Close() {
 
 func New(c Config, l *zap.Logger) (*BoltDbStore, error) {
 	b := &BoltDbStore{
-		C: c,
-		L: l,
+		c: c,
+		l: l,
 	}
 
 	db, err := bolt.Open(c.DbPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
