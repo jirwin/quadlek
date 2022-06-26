@@ -2,12 +2,13 @@ package plugin_manager
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/slack-go/slack"
 	"github.com/slack-go/slack/slackevents"
-	"net/http"
 )
 
-/ Command is the interface that plugins implement for slash commands.
+// Command is the interface that plugins implement for slash commands.
 // Slash commands are actively triggered by users in slack, and only receive messages when they are invoked.
 type Command interface {
 	GetName() string

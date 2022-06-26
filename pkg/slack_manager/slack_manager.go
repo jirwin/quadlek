@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/slack-go/slack"
 	"go.uber.org/zap"
@@ -20,6 +21,8 @@ func NewConfig() (Config, error) {
 }
 
 type slackState struct {
+	sync.RWMutex
+
 	UserID        string
 	BotID         string
 	Channels      map[string]slack.Channel
@@ -41,12 +44,15 @@ func newSlackState(userID, botID string) *slackState {
 
 type Manager interface {
 	Init(ctx context.Context) error
+	UpdateUser(userID string, user slack.User)
+	UpdateChannel(channelID string, channel slack.Channel)
 	GetUserId() string
 	GetBotId() string
 	GetChannelId(chanName string) (string, error)
 	GetChannel(chanID string) (*slack.Channel, error)
 	GetUser(userID string) (*slack.User, error)
 	GetUserName(userID string) (string, error)
+	Slack() client.SlackClient
 }
 
 type ManagerImpl struct {
@@ -54,6 +60,26 @@ type ManagerImpl struct {
 	c          Config
 	slack      client.SlackClient
 	slackState *slackState
+}
+
+func (m *ManagerImpl) UpdateUser(user slack.User) {
+	m.slackState.Lock()
+	defer m.slackState.Unlock()
+
+	m.slackState.Users[user.ID] = user
+	m.slackState.HumanUsers[user.Name] = user
+}
+
+func (m *ManagerImpl) UpdateChannel(channel slack.Channel) {
+	m.slackState.Lock()
+	defer m.slackState.Unlock()
+
+	m.slackState.Channels[channel.ID] = channel
+	m.slackState.HumanChannels[channel.Name] = channel
+}
+
+func (m *ManagerImpl) Slack() client.SlackClient {
+	return m.slack
 }
 
 func (m *ManagerImpl) Init(ctx context.Context) error {
@@ -64,6 +90,8 @@ func (m *ManagerImpl) Init(ctx context.Context) error {
 	}
 
 	m.slackState = newSlackState(at.UserID, at.BotID)
+	m.slackState.Lock()
+	defer m.slackState.Unlock()
 
 	pageToken := ""
 	for {
@@ -73,8 +101,7 @@ func (m *ManagerImpl) Init(ctx context.Context) error {
 			return err
 		}
 		for _, channel := range channels {
-			m.slackState.Channels[channel.ID] = channel
-			m.slackState.HumanChannels[channel.Name] = channel
+			m.UpdateChannel(channel)
 		}
 
 		if nextPage == "" {
@@ -89,8 +116,7 @@ func (m *ManagerImpl) Init(ctx context.Context) error {
 		return err
 	}
 	for _, user := range users {
-		m.slackState.Users[user.ID] = user
-		m.slackState.HumanUsers[user.Name] = user
+		m.UpdateUser(user)
 	}
 
 	if v := os.Getenv("COMMIT_SHA"); v != "" {
@@ -104,16 +130,25 @@ func (m *ManagerImpl) Init(ctx context.Context) error {
 
 // GetUserId returns the SlackManager user ID for the Bot.
 func (m *ManagerImpl) GetUserId() string {
+	m.slackState.RLock()
+	defer m.slackState.RUnlock()
+
 	return m.slackState.UserID
 }
 
 // GetBotId returns the SlackManager bot ID
 func (m *ManagerImpl) GetBotId() string {
+	m.slackState.RLock()
+	defer m.slackState.RUnlock()
+
 	return m.slackState.BotID
 }
 
 // GetChannelId returns the SlackManager channel ID for a given human-readable channel name.
 func (m *ManagerImpl) GetChannelId(chanName string) (string, error) {
+	m.slackState.RLock()
+	defer m.slackState.RUnlock()
+
 	channel, ok := m.slackState.HumanChannels[chanName]
 	if !ok {
 		return "", fmt.Errorf("Channel(%s) not found.", chanName)
@@ -124,6 +159,9 @@ func (m *ManagerImpl) GetChannelId(chanName string) (string, error) {
 
 // GetChannel returns the SlackManager channel object given a channel ID
 func (m *ManagerImpl) GetChannel(chanID string) (*slack.Channel, error) {
+	m.slackState.RLock()
+	defer m.slackState.RUnlock()
+
 	channel, ok := m.slackState.Channels[chanID]
 	if !ok {
 		return nil, fmt.Errorf("Channel(%s) not found.", chanID)
@@ -134,6 +172,9 @@ func (m *ManagerImpl) GetChannel(chanID string) (*slack.Channel, error) {
 
 // GetUser returns the SlackManager user object given a user ID
 func (m *ManagerImpl) GetUser(userID string) (*slack.User, error) {
+	m.slackState.RLock()
+	defer m.slackState.RUnlock()
+
 	user, ok := m.slackState.Users[userID]
 	if !ok {
 		return nil, fmt.Errorf("User(%s) not found.", userID)
@@ -144,6 +185,9 @@ func (m *ManagerImpl) GetUser(userID string) (*slack.User, error) {
 
 // GetUserName returns the human-readable user name for a given user ID
 func (m *ManagerImpl) GetUserName(userID string) (string, error) {
+	m.slackState.RLock()
+	defer m.slackState.RUnlock()
+	
 	user, ok := m.slackState.Users[userID]
 	if !ok {
 		return "", fmt.Errorf("User(%s) not found.", userID)

@@ -5,7 +5,9 @@ package quadlek
 
 import (
 	"context"
+
 	"github.com/google/wire"
+
 	"github.com/jirwin/quadlek/pkg/bot"
 	"github.com/jirwin/quadlek/pkg/data_store"
 	"github.com/jirwin/quadlek/pkg/data_store/boltdb"
@@ -29,11 +31,11 @@ func NewQuadlek(ctx context.Context) (*bot.QuadlekBot, error) {
 		slack_manager.Wired,
 		wire.Bind(new(slack_manager.Manager), new(*slack_manager.ManagerImpl)),
 
-		plugin_manager.Wired,
-		wire.Bind(new(plugin_manager.Manager), new(*plugin_manager.ManagerImpl)),
-
 		webhook_manager.Wired,
 		wire.Bind(new(webhook_manager.Manager), new(*webhook_manager.ManagerImpl)),
+
+		plugin_manager.Wired,
+		wire.Bind(new(plugin_manager.Manager), new(*plugin_manager.ManagerImpl)),
 
 		bot.Wired,
 	)

@@ -16,7 +16,6 @@ import (
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 
-	"github.com/jirwin/quadlek/pkg/plugin_manager"
 	"github.com/jirwin/quadlek/pkg/slack_manager/client"
 )
 
@@ -42,11 +41,10 @@ type Manager interface {
 }
 
 type ManagerImpl struct {
-	l             *zap.Logger
-	c             Config
-	slackConfig   client.Config
-	pluginManager plugin_manager.Manager
-	server        *http.Server
+	l           *zap.Logger
+	c           Config
+	slackConfig client.Config
+	server      *http.Server
 
 	router *mux.Router
 }
@@ -88,7 +86,7 @@ func (m *ManagerImpl) ValidateSlackWebhook(f http.HandlerFunc) http.HandlerFunc 
 		if err != nil {
 			m.l.Error("error reading request body", zap.Error(err))
 			rw.WriteHeader(http.StatusUnauthorized)
-			rw.Write(nil)
+			_, _ = rw.Write(nil)
 			return
 		}
 
@@ -110,21 +108,19 @@ func (m *ManagerImpl) ValidateSlackWebhook(f http.HandlerFunc) http.HandlerFunc 
 		}
 
 		rw.WriteHeader(http.StatusUnauthorized)
-		rw.Write(nil)
-		return
+		_, _ = rw.Write(nil)
 	}
 
 	return handler
 }
 
-func New(c Config, l *zap.Logger, slackConfig client.Config, pluginManager plugin_manager.Manager) (*ManagerImpl, error) {
+func New(c Config, l *zap.Logger, slackConfig client.Config) (*ManagerImpl, error) {
 	router := mux.NewRouter()
 	m := &ManagerImpl{
-		l:             l.Named("webhook-manager"),
-		c:             c,
-		slackConfig:   slackConfig,
-		pluginManager: pluginManager,
-		router:        router,
+		l:           l.Named("webhook-manager"),
+		c:           c,
+		slackConfig: slackConfig,
+		router:      router,
 		server: &http.Server{
 			Addr:    c.ListenAddress,
 			Handler: router,

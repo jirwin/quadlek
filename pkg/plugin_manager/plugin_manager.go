@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/slack-go/slack"
 	"go.uber.org/zap"
 
 	"github.com/jirwin/quadlek/pkg/data_store"
+	"github.com/jirwin/quadlek/pkg/slack_manager"
+	"github.com/jirwin/quadlek/pkg/webhook_manager"
 )
 
 type Config struct {
@@ -24,24 +27,34 @@ type Manager interface {
 	Start(ctx context.Context)
 	Close()
 	Register(p interface{}) error
+	RespondToSlashCommand(url string, cmdResp *CommandResp) error
 }
 
 type ManagerImpl struct {
-	c             Config
-	l             *zap.Logger
-	dataStore     data_store.DataStore
-	commands      map[string]*registeredCommand
-	webhooks      map[string]*registeredWebhook
-	interactions  map[string]*registeredInteraction
-	hooks         []*registeredHook
-	reactionHooks []*registeredReactionHook
-	ctx           context.Context
-	cancel        context.CancelFunc
-	wg            sync.WaitGroup
+	c                    Config
+	l                    *zap.Logger
+	webhookManager       webhook_manager.Manager
+	slackManager         slack_manager.Manager
+	dataStore            data_store.DataStore
+	commands             map[string]*registeredCommand
+	webhooks             map[string]*registeredWebhook
+	interactions         map[string]*registeredInteraction
+	cmdChannel           chan *slashCommand
+	pluginWebhookChannel chan *PluginWebhook
+	interactionChannel   chan *slack.InteractionCallback
+	hooks                []*registeredHook
+	reactionHooks        []*registeredReactionHook
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	wg                   sync.WaitGroup
 }
 
 func (m *ManagerImpl) Start(ctx context.Context) {
 	m.ctx, m.cancel = context.WithCancel(ctx)
+	m.webhookManager.RegisterRoute("/slack/command", m.handleSlackCommand, []string{"POST"}, true)
+	m.webhookManager.RegisterRoute("/slack/command", m.handlePluginWebhook, []string{"GET", "POST", "DELETE", "PUT"}, false)
+	m.webhookManager.RegisterRoute("/slack/command", m.handleSlackInteraction, []string{"POST"}, true)
+	m.webhookManager.RegisterRoute("/slack/command", m.handleSlackEvent, []string{"POST"}, true)
 }
 
 func (m *ManagerImpl) Close() {
@@ -164,11 +177,19 @@ func (m *ManagerImpl) Register(p interface{}) error {
 	return nil
 }
 
-func New(c Config, l *zap.Logger, dataStore data_store.DataStore) (*ManagerImpl, error) {
+func New(
+	c Config,
+	l *zap.Logger,
+	webhookManager webhook_manager.Manager,
+	slackManager slack_manager.Manager,
+	dataStore data_store.DataStore,
+) (*ManagerImpl, error) {
 	m := &ManagerImpl{
-		c:         c,
-		l:         l.Named("plugin-manager"),
-		dataStore: dataStore,
+		c:              c,
+		l:              l.Named("plugin-manager"),
+		webhookManager: webhookManager,
+		slackManager:   slackManager,
+		dataStore:      dataStore,
 	}
 
 	return m, nil

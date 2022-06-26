@@ -45,8 +45,6 @@ func NewConfig() (Config, error) {
 type SlackClient interface {
 	Api() *slack.Client
 	Respond(msg *slack.Msg, resp string)
-	PostMessage(channel, resp string, params slack.PostMessageParameters) (string, string, error)
-	OpenModalView(triggerID string, response slack.ModalViewRequest) (*slack.ViewResponse, error)
 	Say(channel string, resp string)
 	React(msg *slack.Msg, reaction string)
 }
