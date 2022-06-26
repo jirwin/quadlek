@@ -172,29 +172,29 @@ func (m *ManagerImpl) GetChannelId(chanName string) (string, error) {
 }
 
 // GetChannel returns the SlackManager channel object given a channel ID
-func (m *ManagerImpl) GetChannel(chanID string) (*slack.Channel, error) {
+func (m *ManagerImpl) GetChannel(chanID string) (slack.Channel, error) {
 	m.slackState.RLock()
 	defer m.slackState.RUnlock()
 
 	channel, ok := m.slackState.Channels[chanID]
 	if !ok {
-		return nil, fmt.Errorf("Channel(%s) not found.", chanID)
+		return slack.Channel{}, fmt.Errorf("Channel(%s) not found.", chanID)
 	}
 
-	return &channel, nil
+	return channel, nil
 }
 
 // GetUser returns the SlackManager user object given a user ID
-func (m *ManagerImpl) GetUser(userID string) (*slack.User, error) {
+func (m *ManagerImpl) GetUser(userID string) (slack.User, error) {
 	m.slackState.RLock()
 	defer m.slackState.RUnlock()
 
 	user, ok := m.slackState.Users[userID]
 	if !ok {
-		return nil, fmt.Errorf("User(%s) not found.", userID)
+		return slack.User{}, fmt.Errorf("User(%s) not found.", userID)
 	}
 
-	return &user, nil
+	return user, nil
 }
 
 // GetUserName returns the human-readable user name for a given user ID

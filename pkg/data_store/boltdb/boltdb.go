@@ -35,7 +35,7 @@ func (b *BoltDbStore) InitPluginBucket(pluginID string) error {
 	panic("implement me")
 }
 
-func (b *BoltDbStore) GetStore(pluginID string) {
+func (b *BoltDbStore) GetStore(pluginID string) PluginStore {
 	//TODO implement me
 	panic("implement me")
 }

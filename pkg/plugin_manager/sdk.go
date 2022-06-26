@@ -18,7 +18,7 @@ type Command interface {
 
 // registeredCommand is a struct used internally to represent a command that a plugin has registered
 type registeredCommand struct {
-	PluginId string
+	PluginID string
 	Command  Command
 }
 
@@ -57,7 +57,6 @@ func MakeCommand(name string, runFn func(ctx context.Context, cmdChan <-chan *Co
 type CommandMsg struct {
 	Helper  PluginHelper
 	Command *slashCommand
-	Store   *Store
 }
 
 // CommandResp is the struct that is used to respond to a command if interaction is required.
@@ -132,7 +131,6 @@ type Hook interface {
 type HookMsg struct {
 	Helper PluginHelper
 	Msg    *slack.Msg
-	Store  *Store
 }
 
 // registeredHook is the struct used internally to represent a registered hook.
@@ -176,7 +174,6 @@ type ReactionHook interface {
 type ReactionHookMsg struct {
 	Helper   PluginHelper
 	Reaction *slackevents.ReactionAddedEvent
-	Store    *Store
 }
 
 // registeredReactionHook is the internal struct that represents a registered plugin.
@@ -221,7 +218,6 @@ type WebhookMsg struct {
 	Helper         PluginHelper
 	Request        *http.Request
 	ResponseWriter http.ResponseWriter
-	Store          *Store
 	Done           chan bool
 }
 
@@ -286,7 +282,7 @@ type ReactionHookPlugin interface {
 }
 type LoadPlugin interface {
 	Plugin
-	Load(helper PluginHelper, store *Store) error
+	Load(helper PluginHelper) error
 }
 
 type InteractionPlugin interface {

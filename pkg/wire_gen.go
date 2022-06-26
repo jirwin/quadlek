@@ -53,6 +53,14 @@ func NewQuadlek(ctx context.Context) (*bot.QuadlekBot, error) {
 	if err != nil {
 		return nil, err
 	}
+	webhook_managerConfig, err := webhook_manager.NewConfig()
+	if err != nil {
+		return nil, err
+	}
+	webhook_managerManagerImpl, err := webhook_manager.New(webhook_managerConfig, logger, clientConfig)
+	if err != nil {
+		return nil, err
+	}
 	boltdbConfig, err := boltdb.NewConfig()
 	if err != nil {
 		return nil, err
@@ -61,15 +69,7 @@ func NewQuadlek(ctx context.Context) (*bot.QuadlekBot, error) {
 	if err != nil {
 		return nil, err
 	}
-	plugin_managerManagerImpl, err := plugin_manager.New(plugin_managerConfig, logger, boltDbStore)
-	if err != nil {
-		return nil, err
-	}
-	webhook_managerConfig, err := webhook_manager.NewConfig()
-	if err != nil {
-		return nil, err
-	}
-	webhook_managerManagerImpl, err := webhook_manager.New(webhook_managerConfig, logger, clientConfig, plugin_managerManagerImpl)
+	plugin_managerManagerImpl, err := plugin_manager.New(plugin_managerConfig, logger, webhook_managerManagerImpl, managerImpl, boltDbStore)
 	if err != nil {
 		return nil, err
 	}

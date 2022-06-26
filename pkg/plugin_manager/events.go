@@ -118,9 +118,8 @@ func (m *ManagerImpl) handleSlackEvent(w http.ResponseWriter, r *http.Request) {
 						}()
 
 						cmd.Command.Channel() <- &CommandMsg{
-							Bot:     b,
+							Helper:  NewPluginHelper(cmd.PluginID, m.l, m.slackManager, m.dataStore.GetStore(cmd.PluginID)),
 							Command: slashCmd,
-							Store:   b.getStore(cmd.PluginId),
 						}
 
 					}

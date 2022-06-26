@@ -10,6 +10,7 @@ import (
 	"github.com/slack-go/slack"
 	"go.uber.org/zap"
 
+	"github.com/jirwin/quadlek/pkg/data_store/boltdb"
 	"github.com/jirwin/quadlek/pkg/slack_manager"
 )
 
@@ -27,6 +28,7 @@ type PluginHelper interface {
 
 type pluginHelper struct {
 	slackManager slack_manager.Manager
+	store        boltdb.PluginStore
 	l            *zap.Logger
 	pluginID     string
 }
@@ -157,12 +159,13 @@ func (p *pluginHelper) GetChannel(chanID string) (slack.Channel, error) {
 	return p.slackManager.GetChannel(chanID)
 }
 
-func NewPluginHelper(pluginID string, l *zap.Logger, slackManager slack_manager.Manager) (*pluginHelper, error) {
+func NewPluginHelper(pluginID string, l *zap.Logger, slackManager slack_manager.Manager, store boltdb.PluginStore) *pluginHelper {
 	ph := &pluginHelper{
 		slackManager: slackManager,
-		l:            l,
+		l:            l.Named(fmt.Sprintf("plugin-helper-%s", pluginID)),
 		pluginID:     pluginID,
+		store:        store,
 	}
 
-	return ph, nil
+	return ph
 }

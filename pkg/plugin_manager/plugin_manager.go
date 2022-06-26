@@ -87,7 +87,7 @@ func (m *ManagerImpl) Register(p interface{}) error {
 	}
 
 	if lp, ok := plugin.(LoadPlugin); ok {
-		err = lp.Load(b, m.dataStore.GetStore(lp.GetId()))
+		err = lp.Load(NewPluginHelper(plugin.GetId(), m.l, m.slackManager, m.dataStore.GetStore(plugin.GetId())))
 		if err != nil {
 			return err
 		}
@@ -100,7 +100,7 @@ func (m *ManagerImpl) Register(p interface{}) error {
 				return fmt.Errorf("Command already exists: %s", command.GetName())
 			}
 			m.commands[command.GetName()] = &registeredCommand{
-				PluginId: cp.GetId(),
+				PluginID: cp.GetId(),
 				Command:  command,
 			}
 			m.wg.Add(1)
@@ -154,9 +154,9 @@ func (m *ManagerImpl) Register(p interface{}) error {
 			}
 			m.wg.Add(1)
 			go func(wh Webhook) {
-				defer b.wg.Done()
+				defer m.wg.Done()
 
-				wh.Run(b.ctx)
+				wh.Run(m.ctx)
 			}(wHook)
 		}
 	}
@@ -173,7 +173,7 @@ func (m *ManagerImpl) Register(p interface{}) error {
 			}
 			m.wg.Add(1)
 			go func(s Interaction) {
-				defer b.wg.Done()
+				defer m.wg.Done()
 				s.Run(m.ctx)
 			}(ic)
 		}
