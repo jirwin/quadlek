@@ -69,7 +69,7 @@ func NewQuadlek(ctx context.Context) (*bot.QuadlekBot, error) {
 	if err != nil {
 		return nil, err
 	}
-	webhook_managerManagerImpl, err := webhook_manager.New(webhook_managerConfig, logger, plugin_managerManagerImpl)
+	webhook_managerManagerImpl, err := webhook_manager.New(webhook_managerConfig, logger, clientConfig, plugin_managerManagerImpl)
 	if err != nil {
 		return nil, err
 	}

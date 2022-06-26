@@ -9,12 +9,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 	"sync"
 
 	"github.com/boltdb/bolt"
 	"github.com/slack-go/slack"
+	"go.uber.org/zap"
 )
 
 // This is the core struct for the Bot, and provides all methods required for interacting with various SlackManager APIs.
@@ -197,7 +197,7 @@ func (b *Bot) initInfo() error {
 	return nil
 }
 
-// PluginManager
+// pluginManager
 // handleEvents is a goroutine that handles and dispatches various events.
 // These events include callbacks from SlackManager and custom webhooks for plugins.
 func (b *Bot) handleEvents() {

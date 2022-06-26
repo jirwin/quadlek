@@ -41,13 +41,11 @@ type ManagerImpl struct {
 }
 
 func (m *ManagerImpl) Start(ctx context.Context) {
-	//TODO implement me
-	panic("implement me")
+	m.ctx, m.cancel = context.WithCancel(ctx)
 }
 
 func (m *ManagerImpl) Close() {
-	//TODO implement me
-	panic("implement me")
+	m.cancel()
 }
 
 // RegisterPlugin registers the given Plugin with the Bot.
@@ -169,7 +167,7 @@ func (m *ManagerImpl) Register(p interface{}) error {
 func New(c Config, l *zap.Logger, dataStore data_store.DataStore) (*ManagerImpl, error) {
 	m := &ManagerImpl{
 		c:         c,
-		l:         l,
+		l:         l.Named("plugin-manager"),
 		dataStore: dataStore,
 	}
 

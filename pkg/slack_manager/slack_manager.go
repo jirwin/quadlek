@@ -3,10 +3,12 @@ package slack_manager
 import (
 	"context"
 	"fmt"
-	"github.com/jirwin/quadlek/pkg/slack_manager/client"
+	"os"
+
 	"github.com/slack-go/slack"
 	"go.uber.org/zap"
-	"os"
+
+	"github.com/jirwin/quadlek/pkg/slack_manager/client"
 )
 
 type Config struct {
@@ -152,7 +154,7 @@ func (m *ManagerImpl) GetUserName(userID string) (string, error) {
 
 func New(l *zap.Logger, c Config, slackClient client.SlackClient) (*ManagerImpl, error) {
 	m := &ManagerImpl{
-		l:     l,
+		l:     l.Named("slack-manager"),
 		c:     c,
 		slack: slackClient,
 	}

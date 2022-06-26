@@ -2,11 +2,13 @@ package bot
 
 import (
 	"context"
+
+	"go.uber.org/zap"
+
 	"github.com/jirwin/quadlek/pkg/data_store"
 	"github.com/jirwin/quadlek/pkg/plugin_manager"
 	"github.com/jirwin/quadlek/pkg/slack_manager"
 	"github.com/jirwin/quadlek/pkg/webhook_manager"
-	"go.uber.org/zap"
 )
 
 type Config struct{}
@@ -16,11 +18,11 @@ func NewConfig() (Config, error) {
 }
 
 type QuadlekBot struct {
-	L              *zap.Logger
+	l              *zap.Logger
 	SlackManager   slack_manager.Manager
 	PluginManager  plugin_manager.Manager
 	WebhookManager webhook_manager.Manager
-	C              Config
+	c              Config
 	DataStore      data_store.DataStore
 
 	ctx    context.Context
@@ -35,7 +37,7 @@ func (q *QuadlekBot) Start(ctx context.Context) error {
 
 	err := q.SlackManager.Init()
 	if err != nil {
-		q.L.Error("error initializing slack", zap.Error(err))
+		q.l.Error("error initializing slack", zap.Error(err))
 		return err
 	}
 
@@ -59,8 +61,8 @@ func New(
 	dataStore data_store.DataStore,
 ) (*QuadlekBot, error) {
 	q := &QuadlekBot{
-		C:              c,
-		L:              l,
+		c:              c,
+		l:              l.Named("quadlek-bot"),
 		SlackManager:   slackManager,
 		PluginManager:  pluginManager,
 		WebhookManager: webhookManager,

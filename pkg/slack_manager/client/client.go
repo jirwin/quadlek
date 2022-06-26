@@ -2,9 +2,10 @@ package client
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/slack-go/slack"
 	"go.uber.org/zap"
-	"os"
 )
 
 type Config struct {
@@ -105,7 +106,7 @@ func NewSlackClient(config Config, l *zap.Logger, httpClient *slackHttpClient) (
 
 	c := &SlackClientImpl{
 		api: slack.New(config.ApiKey, opts...),
-		l:   l,
+		l:   l.Named("slack-client"),
 	}
 
 	return c, nil

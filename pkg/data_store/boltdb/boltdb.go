@@ -49,7 +49,7 @@ func (b *BoltDbStore) Close() {
 func New(c Config, l *zap.Logger) (*BoltDbStore, error) {
 	b := &BoltDbStore{
 		c: c,
-		l: l,
+		l: l.Named("boltdb-datastore"),
 	}
 
 	db, err := bolt.Open(c.DbPath, 0600, &bolt.Options{Timeout: 1 * time.Second})
