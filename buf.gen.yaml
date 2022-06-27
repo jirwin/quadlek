@@ -1,5 +1,5 @@
 version: v1
 plugins:
   - remote: buf.build/protocolbuffers/plugins/go:v1.28.0-1
-    out: pb
+    out: pkg/pb
     opt: paths=source_relative

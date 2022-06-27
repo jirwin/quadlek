@@ -4,4 +4,7 @@ lint:
 protogen:
 	buf generate
 
+wiregen:
+	cd pkg && wire
+
 .PHONY: lint

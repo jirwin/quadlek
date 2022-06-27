@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/jirwin/quadlek/pb/plugins/comics/v1";
+option go_package = "github.com/jirwin/pkg/pb/plugins/comics/v1";
 package quadlek.plugins.comics.v1;
 
 message Templates {

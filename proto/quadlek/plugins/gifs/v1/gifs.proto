@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/jirwin/quadlek/pb/plugins/gifs/v1";
+option go_package = "github.com/jirwin/pkg/pb/plugins/gifs/v1";
 package quadlek.plugins.gifs.v1;
 
 message Alias {
