@@ -37,7 +37,7 @@ type pluginHelper struct {
 }
 
 func (p *pluginHelper) StopBot() {
-	syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+	_ = syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 }
 
 func (p *pluginHelper) Store() boltdb.PluginStore {
@@ -147,15 +147,20 @@ func (p *pluginHelper) RespondToSlashCommand(url string, cmdResp *CommandResp) e
 }
 
 func (p *pluginHelper) Respond(msg slack.Msg, resp string) {
-	p.slackManager.Slack().Api().PostMessage(
+	_, _, err := p.slackManager.Slack().Api().PostMessage(
 		msg.Channel,
 		slack.MsgOptionText(fmt.Sprintf("<@%s>: %s", msg.User, resp), false),
-	) //nolint:errcheck
+	)
+	if err != nil {
+		p.l.Error("error responding to message", zap.Error(err))
+	}
 }
 
 func (p *pluginHelper) Say(channel string, resp string) {
-	p.slackManager.Slack().Api().PostMessage(channel, slack.MsgOptionText(resp, false)) //nolint:errcheck
-
+	_, _, err := p.slackManager.Slack().Api().PostMessage(channel, slack.MsgOptionText(resp, false))
+	if err != nil {
+		p.l.Error("error saying message message", zap.Error(err), zap.String("channel", channel))
+	}
 }
 
 func (p *pluginHelper) GetUser(userID string) (slack.User, error) {

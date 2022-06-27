@@ -76,5 +76,4 @@ func (m *ManagerImpl) handleSlackInteraction(w http.ResponseWriter, r *http.Requ
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte{})
-	return
 }
