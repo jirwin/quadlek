@@ -141,11 +141,11 @@ func (m *ManagerImpl) handleSlackEvent(w http.ResponseWriter, r *http.Request) {
 					m.l.Error("Unable to add channel", zap.Error(err))
 					return
 				}
-				m.slackManager.UpdateChannel(iev.Channel.ID, *channel)
+				m.slackManager.UpdateChannel(*channel)
 			}
 
 		case *slack.UserChangeEvent:
-			m.slackManager.UpdateUser(iev.User.ID, iev.User)
+			m.slackManager.UpdateUser(iev.User)
 
 		default:
 			m.l.Debug("unhandled event", zap.Any("event", iev))

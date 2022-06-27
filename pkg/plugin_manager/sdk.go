@@ -8,18 +8,86 @@ import (
 	"github.com/slack-go/slack/slackevents"
 )
 
-// Command is the interface that plugins implement for slash commands.
-// Slash commands are actively triggered by users in slack, and only receive messages when they are invoked.
-type Command interface {
-	GetName() string
-	Channel() chan<- *CommandMsg
-	Run(ctx context.Context)
+// plugin is an internal implementation of Plugin
+type plugin struct {
+	id            string
+	commands      []Command
+	hooks         []Hook
+	reactionHooks []ReactionHook
+	webhooks      []Webhook
+	loadFn        func(helper PluginHelper) error
 }
 
-// registeredCommand is a struct used internally to represent a command that a plugin has registered
-type registeredCommand struct {
-	PluginID string
-	Command  Command
+// GetId returns the id set by the plugin. This should be unique across plugins.
+func (p *plugin) GetId() string {
+	return p.id
+}
+
+// GetCommands returns all of the commands registered with the plugin.
+func (p *plugin) GetCommands() []Command {
+	return p.commands
+}
+
+// GetHooks returns all of the hooks registered with the plugin.
+func (p *plugin) GetHooks() []Hook {
+	return p.hooks
+}
+
+// GetWebhooks returns all of the webhooks registered with the plugin
+func (p *plugin) GetWebhooks() []Webhook {
+	return p.webhooks
+}
+
+// GetReactionHooks returns all of the reaction hooks registered with the plugin.
+func (p *plugin) GetReactionHooks() []ReactionHook {
+	return p.reactionHooks
+}
+
+// Load executes the load function specified by the plugin
+func (p *plugin) Load(helper PluginHelper) error {
+	return p.loadFn(helper)
+}
+
+// plugin is an internal implementation of Plugin
+type interactionPlugin struct {
+	id           string
+	interactions []Interaction
+}
+
+// GetId returns the id set by the plugin. This should be unique across plugins.
+func (p *interactionPlugin) GetId() string {
+	return p.id
+}
+
+// GetCommands returns all of the commands registered with the plugin.
+func (p *interactionPlugin) GetInteractions() []Interaction {
+	return p.interactions
+}
+
+// MakePlugin is a helper function that returns a Plugin.
+func MakePlugin(id string, commands []Command, hooks []Hook, reactionHooks []ReactionHook, webhooks []Webhook, loadFunction func(helper PluginHelper) error) Plugin {
+	if loadFunction == nil {
+		loadFunction = func(helper PluginHelper) error {
+			return nil
+		}
+	}
+
+	return &plugin{
+		id:            id,
+		commands:      commands,
+		hooks:         hooks,
+		webhooks:      webhooks,
+		reactionHooks: reactionHooks,
+		loadFn:        loadFunction,
+	}
+}
+
+// MakePlugin is a helper function that returns a Plugin.
+func MakeInteractionPlugin(id string, plugins []Interaction) InteractionPlugin {
+	return &interactionPlugin{
+		id:           id,
+		interactions: plugins,
+	}
 }
 
 // command is a an implementation of the Command interface
@@ -53,6 +121,20 @@ func MakeCommand(name string, runFn func(ctx context.Context, cmdChan <-chan *Co
 	}
 }
 
+// Command is the interface that plugins implement for slash commands.
+// Slash commands are actively triggered by users in slack, and only receive messages when they are invoked.
+type Command interface {
+	GetName() string
+	Channel() chan<- *CommandMsg
+	Run(ctx context.Context)
+}
+
+// registeredCommand is a struct used internally to represent a command that a plugin has registered
+type registeredCommand struct {
+	PluginID string
+	Command  Command
+}
+
 // CommandMsg is the struct that is passed to a commands channel as it is activated.
 type CommandMsg struct {
 	Helper  PluginHelper
@@ -77,7 +159,7 @@ type Interaction interface {
 
 // registeredInteraction is a struct used internally to represent a Interaction that a plugin has registered
 type registeredInteraction struct {
-	PluginId    string
+	PluginID    string
 	Interaction Interaction
 }
 
@@ -115,8 +197,7 @@ func MakeInteraction(name string, runFn func(ctx context.Context, cmdChan <-chan
 // InteractionMsg is the struct that is passed to a Shortcuts channel as it is activated.
 type InteractionMsg struct {
 	Helper      PluginHelper
-	Interaction *slack.InteractionCallback
-	Store       *Store
+	Interaction slack.InteractionCallback
 }
 
 // Hook is the interface that a plugin can implement to create a hook.
@@ -130,12 +211,12 @@ type Hook interface {
 // HookMsg is the struct that is passed to a hook's channel for each message seen.
 type HookMsg struct {
 	Helper PluginHelper
-	Msg    *slack.Msg
+	Msg    slack.Msg
 }
 
 // registeredHook is the struct used internally to represent a registered hook.
 type registeredHook struct {
-	PluginId string
+	PluginID string
 	Hook     Hook
 }
 
@@ -178,7 +259,7 @@ type ReactionHookMsg struct {
 
 // registeredReactionHook is the internal struct that represents a registered plugin.
 type registeredReactionHook struct {
-	PluginId     string
+	PluginID     string
 	ReactionHook ReactionHook
 }
 
@@ -223,7 +304,7 @@ type WebhookMsg struct {
 
 // registeredWebhook is the internal struct that represents a registered webhook
 type registeredWebhook struct {
-	PluginId string
+	PluginID string
 	Webhook  Webhook
 }
 

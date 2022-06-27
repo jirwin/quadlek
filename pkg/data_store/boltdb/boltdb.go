@@ -20,7 +20,7 @@ func NewConfig() (Config, error) {
 	if dbPath == "" {
 		return Config{}, fmt.Errorf("QUADLEK_DB_PATH must be set")
 	}
-
+	c.DbPath = dbPath
 	return c, nil
 }
 
@@ -31,18 +31,36 @@ type BoltDbStore struct {
 }
 
 func (b *BoltDbStore) InitPluginBucket(pluginID string) error {
-	//TODO implement me
-	panic("implement me")
+	err := b.db.Update(func(tx *bolt.Tx) error {
+		rootBkt, err := tx.CreateBucketIfNotExists([]byte("plugins"))
+		if err != nil {
+			return err
+		}
+
+		_, err = rootBkt.CreateBucketIfNotExists([]byte(pluginID))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *BoltDbStore) GetStore(pluginID string) PluginStore {
-	//TODO implement me
-	panic("implement me")
+	return &pluginStore{
+		pluginID: pluginID,
+		db:       b.db,
+	}
 }
 
 func (b *BoltDbStore) Close() {
 	if b.db != nil {
 		b.db.Close()
+		b.db = nil
 	}
 }
 

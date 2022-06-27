@@ -19,51 +19,38 @@ func NewConfig() (Config, error) {
 
 type QuadlekBot struct {
 	l              *zap.Logger
-	SlackManager   slack_manager.Manager
-	PluginManager  plugin_manager.Manager
-	WebhookManager webhook_manager.Manager
+	slackManager   slack_manager.Manager
+	pluginManager  plugin_manager.Manager
+	webhookManager webhook_manager.Manager
 	c              Config
-	DataStore      data_store.DataStore
+	dataStore      data_store.DataStore
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
 func (q *QuadlekBot) Start(ctx context.Context) error {
-	go q.WebhookManager.Run(ctx)
-	go q.PluginManager.Start(ctx)
+	go q.webhookManager.Run(ctx)
+	go q.pluginManager.Run(ctx)
 
 	q.ctx, q.cancel = context.WithCancel(ctx)
 
-	err := q.SlackManager.Start(ctx)
+	err := q.slackManager.Start(ctx)
 	if err != nil {
 		q.l.Error("error initializing slack", zap.Error(err))
 		return err
 	}
 
-	// If any of the managers stop, quit the entire bot
-	go func() {
-		select {
-		case <-q.WebhookManager.Done():
-			break
-		case <-q.SlackManager.Done():
-			break
-		case <-q.PluginManager.Done():
-			break
-		case <-q.ctx.Done():
-			break
-		}
-		q.Stop()
-	}()
 	return nil
 }
 
 func (q *QuadlekBot) Stop() {
+	q.dataStore.Close()
 	q.cancel()
-	q.wg.Wait()
-	if q.DataStore != nil {
-		q.DataStore.Close()
-	}
+}
+
+func (q *QuadlekBot) RegisterPlugin(plugin interface{}) error {
+	return q.pluginManager.Register(plugin)
 }
 
 func New(
@@ -77,10 +64,10 @@ func New(
 	q := &QuadlekBot{
 		c:              c,
 		l:              l.Named("quadlek-bot"),
-		SlackManager:   slackManager,
-		PluginManager:  pluginManager,
-		WebhookManager: webhookManager,
-		DataStore:      dataStore,
+		slackManager:   slackManager,
+		pluginManager:  pluginManager,
+		webhookManager: webhookManager,
+		dataStore:      dataStore,
 	}
 
 	return q, nil

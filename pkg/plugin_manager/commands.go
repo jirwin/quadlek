@@ -12,7 +12,7 @@ import (
 
 var decoder = schema.NewDecoder()
 
-// slashCommand is an internal object that parses slash command webhooks coming from the SlackManager servers
+// slashCommand is an internal object that parses slash command webhooks coming from the slackManager servers
 type slashCommand struct {
 	Token        string            `schema:"token"`
 	TeamId       string            `schema:"team_id"`
@@ -25,6 +25,28 @@ type slashCommand struct {
 	Text         string            `schema:"text"`
 	ResponseUrl  string            `schema:"response_url"`
 	responseChan chan *CommandResp `schema:"-"`
+}
+
+// dispatchCommand parses an incoming slash command and sends it to the plugin it is registered to
+func (m *ManagerImpl) dispatchCommand(slashCmd *slashCommand) {
+	if slashCmd.Command == "" {
+		return
+	}
+	cmdName := slashCmd.Command[1:]
+
+	m.l.Info("dispatched command", zap.String("cmd_name", cmdName))
+
+	cmd := m.getCommand(cmdName)
+	if cmd == nil {
+		return
+	}
+
+	m.l.Info("fetched command for dispatch", zap.String("plugin_id", cmd.PluginID))
+
+	cmd.Command.Channel() <- &CommandMsg{
+		Helper:  NewPluginHelper(cmd.PluginID, m.l, m.slackManager, m.dataStore.GetStore(cmd.PluginID)),
+		Command: slashCmd,
+	}
 }
 
 // GetCommand returns the registeredCommand for the provided command name
@@ -83,6 +105,7 @@ func prepareSlashCommandResp(cmd *CommandResp) {
 // and dispatches it to the proper plugin.
 // It attempts to handle responding to the request if the plugin doesn't respond in time.
 func (m *ManagerImpl) handleSlackCommand(w http.ResponseWriter, r *http.Request) {
+	m.l.Info("handling slack command")
 	err := r.ParseForm()
 	if err != nil {
 		m.l.Error("error parsing form. Invalid slack command hook.", zap.Error(err))
@@ -99,10 +122,11 @@ func (m *ManagerImpl) handleSlackCommand(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	m.l.Info("sending command to channel")
 	respChan := make(chan *CommandResp)
 	cmd.responseChan = respChan
 	m.cmdChannel <- cmd
-
+	m.l.Info("sent command")
 	timer := time.NewTimer(time.Millisecond * 2500)
 	for {
 		select {

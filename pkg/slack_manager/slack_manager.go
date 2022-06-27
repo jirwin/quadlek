@@ -9,7 +9,7 @@ import (
 	"github.com/slack-go/slack"
 	"go.uber.org/zap"
 
-	"github.com/jirwin/quadlek/pkg/slack_manager/client"
+	"github.com/jirwin/quadlek/pkg/slack_client"
 )
 
 type Config struct {
@@ -44,8 +44,6 @@ func newSlackState(userID, botID string) *slackState {
 
 type Manager interface {
 	Start(ctx context.Context) error
-	Done() <-chan struct{}
-	Stop()
 	UpdateUser(user slack.User)
 	UpdateChannel(channel slack.Channel)
 	GetUserId() string
@@ -54,24 +52,16 @@ type Manager interface {
 	GetChannel(chanID string) (slack.Channel, error)
 	GetUser(userID string) (slack.User, error)
 	GetUserName(userID string) (string, error)
-	Slack() client.SlackClient
+	Slack() slack_client.SlackClient
 }
 
 type ManagerImpl struct {
 	l          *zap.Logger
 	c          Config
-	slack      client.SlackClient
+	slack      slack_client.SlackClient
 	slackState *slackState
 	ctx        context.Context
 	cancel     context.CancelFunc
-}
-
-func (m *ManagerImpl) Done() <-chan struct{} {
-	return m.ctx.Done()
-}
-
-func (m *ManagerImpl) Stop() {
-	m.cancel()
 }
 
 func (m *ManagerImpl) UpdateUser(user slack.User) {
@@ -90,7 +80,7 @@ func (m *ManagerImpl) UpdateChannel(channel slack.Channel) {
 	m.slackState.HumanChannels[channel.Name] = channel
 }
 
-func (m *ManagerImpl) Slack() client.SlackClient {
+func (m *ManagerImpl) Slack() slack_client.SlackClient {
 	return m.slack
 }
 
@@ -115,7 +105,8 @@ func (m *ManagerImpl) Start(ctx context.Context) error {
 			return err
 		}
 		for _, channel := range channels {
-			m.UpdateChannel(channel)
+			m.slackState.Channels[channel.ID] = channel
+			m.slackState.HumanChannels[channel.Name] = channel
 		}
 
 		if nextPage == "" {
@@ -130,7 +121,8 @@ func (m *ManagerImpl) Start(ctx context.Context) error {
 		return err
 	}
 	for _, user := range users {
-		m.UpdateUser(user)
+		m.slackState.Users[user.ID] = user
+		m.slackState.HumanUsers[user.Name] = user
 	}
 
 	if v := os.Getenv("COMMIT_SHA"); v != "" {
@@ -142,7 +134,7 @@ func (m *ManagerImpl) Start(ctx context.Context) error {
 	return nil
 }
 
-// GetUserId returns the SlackManager user ID for the Bot.
+// GetUserId returns the slackManager user ID for the Bot.
 func (m *ManagerImpl) GetUserId() string {
 	m.slackState.RLock()
 	defer m.slackState.RUnlock()
@@ -150,7 +142,7 @@ func (m *ManagerImpl) GetUserId() string {
 	return m.slackState.UserID
 }
 
-// GetBotId returns the SlackManager bot ID
+// GetBotId returns the slackManager bot ID
 func (m *ManagerImpl) GetBotId() string {
 	m.slackState.RLock()
 	defer m.slackState.RUnlock()
@@ -158,7 +150,7 @@ func (m *ManagerImpl) GetBotId() string {
 	return m.slackState.BotID
 }
 
-// GetChannelId returns the SlackManager channel ID for a given human-readable channel name.
+// GetChannelId returns the slackManager channel ID for a given human-readable channel name.
 func (m *ManagerImpl) GetChannelId(chanName string) (string, error) {
 	m.slackState.RLock()
 	defer m.slackState.RUnlock()
@@ -171,7 +163,7 @@ func (m *ManagerImpl) GetChannelId(chanName string) (string, error) {
 	return channel.ID, nil
 }
 
-// GetChannel returns the SlackManager channel object given a channel ID
+// GetChannel returns the slackManager channel object given a channel ID
 func (m *ManagerImpl) GetChannel(chanID string) (slack.Channel, error) {
 	m.slackState.RLock()
 	defer m.slackState.RUnlock()
@@ -184,7 +176,7 @@ func (m *ManagerImpl) GetChannel(chanID string) (slack.Channel, error) {
 	return channel, nil
 }
 
-// GetUser returns the SlackManager user object given a user ID
+// GetUser returns the slackManager user object given a user ID
 func (m *ManagerImpl) GetUser(userID string) (slack.User, error) {
 	m.slackState.RLock()
 	defer m.slackState.RUnlock()
@@ -210,7 +202,7 @@ func (m *ManagerImpl) GetUserName(userID string) (string, error) {
 	return user.Name, nil
 }
 
-func New(l *zap.Logger, c Config, slackClient client.SlackClient) (*ManagerImpl, error) {
+func New(l *zap.Logger, c Config, slackClient slack_client.SlackClient) (*ManagerImpl, error) {
 	m := &ManagerImpl{
 		l:     l.Named("slack-manager"),
 		c:     c,

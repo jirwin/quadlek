@@ -42,9 +42,8 @@ func (m *ManagerImpl) dispatchInteraction(cb *slack.InteractionCallback) {
 	}
 
 	ic.Interaction.Channel() <- &InteractionMsg{
-		Bot:         b,
-		Interaction: cb,
-		Store:       m.getStore(ic.PluginId),
+		Helper:      NewPluginHelper(ic.PluginID, m.l, m.slackManager, m.dataStore.GetStore(ic.PluginID)),
+		Interaction: *cb,
 	}
 }
 
@@ -67,7 +66,7 @@ func (m *ManagerImpl) handleSlackInteraction(w http.ResponseWriter, r *http.Requ
 	}
 
 	if ev.Type == "" {
-		b.Log.Error("missing interaction type")
+		m.l.Error("missing interaction type")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte{})
 		return
@@ -75,7 +74,7 @@ func (m *ManagerImpl) handleSlackInteraction(w http.ResponseWriter, r *http.Requ
 
 	m.interactionChannel <- ev
 
-	w.WriteHeader(http.StatusInternalServerError)
+	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte{})
 	return
 }

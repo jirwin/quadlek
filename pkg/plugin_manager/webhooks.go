@@ -14,6 +14,20 @@ type PluginWebhook struct {
 	ResponseWriter http.ResponseWriter
 }
 
+// dispatchWebhook parses an incoming webhook and sends it to the plugin it is registered to
+func (m *ManagerImpl) dispatchWebhook(webhook *PluginWebhook) {
+	wh := m.getWebhook(webhook.Name)
+	if wh == nil {
+		return
+	}
+
+	wh.Webhook.Channel() <- &WebhookMsg{
+		Helper:         NewPluginHelper(wh.PluginID, m.l, m.slackManager, m.dataStore.GetStore(wh.PluginID)),
+		Request:        webhook.Request,
+		ResponseWriter: webhook.ResponseWriter,
+	}
+}
+
 func (m *ManagerImpl) getWebhook(webhookName string) *registeredWebhook {
 	if webhookName == "" {
 		return nil
@@ -37,10 +51,9 @@ func (m *ManagerImpl) handlePluginWebhook(w http.ResponseWriter, r *http.Request
 
 	done := make(chan bool, 1)
 	msg := &WebhookMsg{
-		Bot:            b,
+		Helper:         NewPluginHelper(wh.PluginID, m.l, m.slackManager, m.dataStore.GetStore(wh.PluginID)),
 		Request:        r,
 		ResponseWriter: w,
-		Store:          b.getStore(wh.PluginId),
 		Done:           done,
 	}
 	wh.Webhook.Channel() <- msg

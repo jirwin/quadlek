@@ -16,7 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 
-	"github.com/jirwin/quadlek/pkg/slack_manager/client"
+	"github.com/jirwin/quadlek/pkg/slack_client"
 )
 
 type Config struct {
@@ -37,14 +37,13 @@ func NewConfig() (Config, error) {
 
 type Manager interface {
 	Run(ctx context.Context)
-	Done() <-chan struct{}
 	RegisterRoute(route string, f http.HandlerFunc, methods []string, validateSlack bool)
 }
 
 type ManagerImpl struct {
 	l           *zap.Logger
 	c           Config
-	slackConfig client.Config
+	slackConfig slack_client.Config
 	server      *http.Server
 
 	router *mux.Router
@@ -52,16 +51,14 @@ type ManagerImpl struct {
 	cancel context.CancelFunc
 }
 
-func (m *ManagerImpl) Done() <-chan struct{} {
-	return m.ctx.Done()
-}
-
 func (m *ManagerImpl) Run(ctx context.Context) {
 	m.server.Handler = m.router
 
 	m.ctx, m.cancel = context.WithCancel(ctx)
+	defer m.cancel()
 
 	go func() {
+		m.l.Info("running webhook server", zap.String("server_addr", m.server.Addr))
 		if err := m.server.ListenAndServe(); err != nil {
 			m.l.Error("listen error", zap.Error(err))
 		}
@@ -102,9 +99,11 @@ func (m *ManagerImpl) ValidateSlackWebhook(f http.HandlerFunc) http.HandlerFunc 
 		rBody := ioutil.NopCloser(bytes.NewBuffer(body))
 		r.Body = rBody
 
-		ts := r.Header.Get("X-SlackManager-Request-Timestamp")
-		signature := r.Header.Get("X-SlackManager-Signature")
+		ts := r.Header.Get("X-Slack-Request-Timestamp")
+		signature := r.Header.Get("X-Slack-Signature")
 
+		m.l.Info("validating request", zap.String("timestamp", ts), zap.String("signature", signature))
+		
 		msg := fmt.Sprintf("v0:%s:%s", ts, body)
 		key := []byte(m.slackConfig.VerificationToken)
 		h := hmac.New(sha256.New, key)
@@ -123,7 +122,7 @@ func (m *ManagerImpl) ValidateSlackWebhook(f http.HandlerFunc) http.HandlerFunc 
 	return handler
 }
 
-func New(c Config, l *zap.Logger, slackConfig client.Config) (*ManagerImpl, error) {
+func New(c Config, l *zap.Logger, slackConfig slack_client.Config) (*ManagerImpl, error) {
 	router := mux.NewRouter()
 	m := &ManagerImpl{
 		l:           l.Named("webhook-manager"),

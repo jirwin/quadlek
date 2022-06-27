@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"syscall"
 	"time"
 
 	"github.com/slack-go/slack"
@@ -24,6 +25,8 @@ type PluginHelper interface {
 	Say(channel string, resp string)
 	GetUser(userId string) (slack.User, error)
 	GetChannel(chanId string) (slack.Channel, error)
+	GetChannelId(channelName string) (string, error)
+	Store() boltdb.PluginStore
 }
 
 type pluginHelper struct {
@@ -34,7 +37,11 @@ type pluginHelper struct {
 }
 
 func (p *pluginHelper) StopBot() {
-	p.slackManager.Stop()
+	syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+}
+
+func (p *pluginHelper) Store() boltdb.PluginStore {
+	return p.store
 }
 
 func (p *pluginHelper) OpenView(triggerID string, response slack.ModalViewRequest) (*slack.ViewResponse, error) {
@@ -157,6 +164,10 @@ func (p *pluginHelper) GetUser(userID string) (slack.User, error) {
 
 func (p *pluginHelper) GetChannel(chanID string) (slack.Channel, error) {
 	return p.slackManager.GetChannel(chanID)
+}
+
+func (p *pluginHelper) GetChannelId(channelName string) (string, error) {
+	return p.slackManager.GetChannelId(channelName)
 }
 
 func NewPluginHelper(pluginID string, l *zap.Logger, slackManager slack_manager.Manager, store boltdb.PluginStore) *pluginHelper {

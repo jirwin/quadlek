@@ -2,13 +2,6 @@ name: ci
 
 on: push
 jobs:
-  todo:
-    runs-on: "ubuntu-latest"
-    steps:
-      - uses: "actions/checkout@master"
-      - name: "TODO to Issue"
-        uses: "alstr/todo-to-issue-action@v4.6.6"
-        id: "todo"
   golangci:
     name: lint
     runs-on: ubuntu-latest
