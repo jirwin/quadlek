@@ -44,10 +44,8 @@ func getSharedPlaylistUser() string {
 func extractSpotifyLink(msg string) []string {
 	var ret []string
 	matches := spotifyTrackRegex.FindAllStringSubmatch(msg, -1)
-	if matches != nil {
-		for _, m := range matches {
-			ret = append(ret, m[1])
-		}
+	for _, m := range matches {
+		ret = append(ret, m[1])
 	}
 	rxStrict := xurls.Strict()
 	urls := rxStrict.FindAllString(msg, -1)
