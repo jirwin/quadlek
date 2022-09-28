@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -76,12 +77,83 @@ func chooseCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	}
 }
 
+// diceRegex matches the 1d6 format for dice rolling
+var diceRegex = regexp.MustCompile("([0-9]+)[dD]([0-9]+)(?:[+]([0-9]+))?")
+
+func diceCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
+	for {
+		select {
+		case cmdMsg := <-cmdChannel:
+			text := cmdMsg.Command.Text
+			choices := strings.Split(text, " ")
+
+			if len(choices) == 0 {
+				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+					Text: "I can't roll zero dice!",
+				}
+				continue
+			}
+
+			// Find all matches for the dice regex
+			found := diceRegex.FindAllStringSubmatch(text, -1)
+			if len(found) == 0 {
+				cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+					Text: "I don't understand your fancy dice. Try sending me things like `1d6 2d4` or `11d12+2`.",
+				}
+				continue
+			}
+
+			cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+				Text:      extractAndRollDice(found),
+				InChannel: true,
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func extractAndRollDice(matches [][]string) string {
+	rv := "You rolled:"
+
+	for _, match := range matches {
+		count, _ := strconv.Atoi(match[1])
+		sides, _ := strconv.Atoi(match[2])
+
+		add := 0
+		addTxt := ""
+		// if we have that match
+		if len(match) == 4 {
+			// Parse it, add to the string
+			add, _ = strconv.Atoi(match[3])
+			if add != 0 {
+				addTxt = "+" + match[3]
+			}
+		}
+
+		var vals []string
+		total := int64(0)
+		for i := 0; i < count; i++ {
+			// Actually roll it
+			val := rand.Int63n(int64(sides)) + 1 + int64(add)
+			total += val
+			vals = append(vals, fmt.Sprintf("%d", val))
+		}
+
+		rv += fmt.Sprintf("\n%dd%d: %s %s = %d", count, sides, total, addTxt, total+int64(add))
+	}
+
+	return rv
+}
+
 func Register() quadlek.Plugin {
 	return quadlek.MakePlugin(
 		"random",
 		[]quadlek.Command{
 			quadlek.MakeCommand("roll", rollCommand),
 			quadlek.MakeCommand("choose", chooseCommand),
+			quadlek.MakeCommand("dice", diceCommand),
 		},
 		nil,
 		nil,
