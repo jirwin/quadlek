@@ -141,7 +141,11 @@ func extractAndRollDice(matches [][]string) string {
 			vals = append(vals, fmt.Sprintf("%d", val))
 		}
 
-		rv += fmt.Sprintf("\n%dd%d: %s %s = %d", count, sides, total, addTxt, total+int64(add))
+		if addTxt != "" {
+			rv += fmt.Sprintf("\n%dd%d: %d %s = %d", count, sides, total, addTxt, total+int64(add))
+		} else {
+			rv += fmt.Sprintf("\n%dd%d: %d", count, sides, total)
+		}
 	}
 
 	return rv
