@@ -20,6 +20,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/olivere/elastic.v5 v5.0.86
+	mvdan.cc/xurls/v2 v2.4.0
 )
 
 require (
