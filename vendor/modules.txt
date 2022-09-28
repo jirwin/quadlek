@@ -156,4 +156,7 @@ google.golang.org/protobuf/types/descriptorpb
 gopkg.in/olivere/elastic.v5
 gopkg.in/olivere/elastic.v5/config
 gopkg.in/olivere/elastic.v5/uritemplates
+# mvdan.cc/xurls/v2 v2.4.0
+## explicit; go 1.16
+mvdan.cc/xurls/v2
 # github.com/nlopes/slack => github.com/jirwin/slack v0.6.1-0.20200216211639-aba6477b6931

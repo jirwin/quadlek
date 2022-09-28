@@ -2,15 +2,17 @@ package spotify
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"regexp"
+	"strings"
 
 	v1 "github.com/jirwin/quadlek/pb/quadlek/plugins/spotify/v1"
-
-	"go.uber.org/zap"
+	"mvdan.cc/xurls/v2"
 
 	"github.com/jirwin/quadlek/quadlek"
 	"github.com/zmb3/spotify"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -39,18 +41,41 @@ func getSharedPlaylistUser() string {
 	return sharedPlaylistUser
 }
 
+func extractSpotifyLink(msg string) []string {
+	var ret []string
+	matches := spotifyTrackRegex.FindAllStringSubmatch(msg, -1)
+	if matches != nil {
+		for _, m := range matches {
+			ret = append(ret, m[1])
+		}
+	}
+	rxStrict := xurls.Strict()
+	urls := rxStrict.FindAllString(msg, -1)
+	for _, u := range urls {
+		parsed, err := url.Parse(u)
+		if err != nil {
+			continue
+		}
+
+		if parsed.Scheme != "https" || parsed.Hostname() != "open.spotify.com" {
+			continue
+		}
+
+		if strings.HasPrefix(parsed.Path, "/track/") {
+			ret = append(ret, strings.TrimPrefix(parsed.Path, "/track/"))
+		}
+	}
+
+	return ret
+}
+
 func saveSongsHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
 	for {
 		select {
 		case hookMsg := <-hookChannel:
-			matches := spotifyTrackRegex.FindAllStringSubmatch(hookMsg.Msg.Text, -1)
-			if matches == nil {
-				continue
-			}
-
-			tracks := []spotify.ID{}
-			for _, match := range matches {
-				tracks = append(tracks, spotify.ID(match[1]))
+			var tracks []spotify.ID
+			for _, match := range extractSpotifyLink(hookMsg.Msg.Text) {
+				tracks = append(tracks, spotify.ID(match))
 			}
 
 			err := hookMsg.Store.Get("authtoken-"+getSharedPlaylistUser(), func(val []byte) error {
