@@ -40,6 +40,28 @@ func rollCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	}
 }
 
+func flip(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
+	for {
+		select {
+		case cmdMsg := <-cmdChannel:
+			f := rand.Int63n(2)
+			var r string
+			if f == 0 {
+				r = "heads"
+			} else {
+				r = "tails"
+			}
+			cmdMsg.Command.Reply() <- &quadlek.CommandResp{
+				Text:      fmt.Sprintf("It landed on %s", r),
+				InChannel: true,
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 func chooseCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	for {
 		select {
@@ -156,6 +178,7 @@ func Register() quadlek.Plugin {
 			quadlek.MakeCommand("roll", rollCommand),
 			quadlek.MakeCommand("choose", chooseCommand),
 			quadlek.MakeCommand("dice", diceCommand),
+			quadlek.MakeCommand("flip", diceCommand),
 		},
 		nil,
 		nil,
