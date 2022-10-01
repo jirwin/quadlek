@@ -179,8 +179,10 @@ func (b *Bot) initInfo() error {
 	}
 
 	if v := os.Getenv("COMMIT_SHA"); v != "" {
-		if c, ok := b.humanChannels["qdev"]; ok {
-			b.Say(c.ID, fmt.Sprintf("I'm back. My version is %s", v))
+		if adminChannel := os.Getenv("ADMIN_SLACK_CHANNEL"); adminChannel != "" {
+			if c, ok := b.humanChannels[adminChannel]; ok {
+				b.Say(c.ID, fmt.Sprintf("I'm back. My version is %s", v))
+			}
 		}
 	}
 

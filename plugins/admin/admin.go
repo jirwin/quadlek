@@ -100,7 +100,7 @@ func healthCheck(ctx context.Context, whChan <-chan *quadlek.WebhookMsg) {
 	}
 }
 
-func Register() quadlek.Plugin {
+func Register(adminChannel string) quadlek.Plugin {
 	return quadlek.MakePlugin(
 		"admin",
 		[]quadlek.Command{
