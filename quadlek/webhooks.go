@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/slack-go/slack"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
+
+	"github.com/slack-go/slack"
 
 	"go.uber.org/zap"
 
@@ -230,13 +231,13 @@ var InvalidRequestSignature = errors.New("invalid request signature")
 
 // Validates the signature header for slack webhooks
 func (b *Bot) ValidateSlackRequest(r *http.Request) error {
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		b.Log.Error("error reading request body")
 		return InvalidRequestSignature
 	}
 
-	rBody := ioutil.NopCloser(bytes.NewBuffer(body))
+	rBody := io.NopCloser(bytes.NewBuffer(body))
 	r.Body = rBody
 
 	ts := r.Header.Get("X-Slack-Request-Timestamp")

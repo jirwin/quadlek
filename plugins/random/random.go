@@ -132,13 +132,11 @@ func extractAndRollDice(matches [][]string) string {
 			}
 		}
 
-		var vals []string
 		total := int64(0)
 		for i := 0; i < count; i++ {
 			// Actually roll it
 			val := rand.Int63n(int64(sides)) + 1 + int64(add)
 			total += val
-			vals = append(vals, fmt.Sprintf("%d", val))
 		}
 
 		if addTxt != "" {

@@ -3,7 +3,7 @@ package quadlek
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -19,7 +19,7 @@ func (b *Bot) handleSlackEvent(w http.ResponseWriter, r *http.Request) {
 		b.Log.Error("unable to validate request signature")
 		return
 	}
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		b.Log.Error("unable to read event body")
 		return
