@@ -105,6 +105,16 @@ func (b *Bot) GetUserName(userId string) (string, error) {
 	return user.Name, nil
 }
 
+// GetUserID returns the slack user name for a human readable username
+func (b *Bot) GetUserID(userName string) (string, error) {
+	user, ok := b.humanUsers[userName]
+	if !ok {
+		return "", errors.New("User not found.")
+	}
+
+	return user.ID, nil
+}
+
 // Respond responds to a Slack message
 // The sent message will go to the same channel as the message that is being responded to and will highlight
 // the author of the original message.
@@ -115,8 +125,8 @@ func (b *Bot) Respond(msg *slack.Msg, resp string) {
 // PostMessage sends a new message to Slack using the provided channel and message string.
 // It returns the channel ID the message was posted to, and the timestamp that the message was posted at.
 // In combination these can be used to identify the exact message that was sent.
-func (b *Bot) PostMessage(channel, resp string, params slack.PostMessageParameters) (string, string, error) {
-	return b.api.PostMessage(channel, slack.MsgOptionText(resp, false))
+func (b *Bot) PostMessage(channel string, options ...slack.MsgOption) (string, string, error) {
+	return b.api.PostMessage(channel, options...)
 }
 
 // Say sends a message to the provided channel
