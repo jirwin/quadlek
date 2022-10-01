@@ -40,7 +40,7 @@ func rollCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	}
 }
 
-func flip(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
+func flipCommand(ctx context.Context, cmdChannel <-chan *quadlek.CommandMsg) {
 	for {
 		select {
 		case cmdMsg := <-cmdChannel:
@@ -178,7 +178,7 @@ func Register() quadlek.Plugin {
 			quadlek.MakeCommand("roll", rollCommand),
 			quadlek.MakeCommand("choose", chooseCommand),
 			quadlek.MakeCommand("dice", diceCommand),
-			quadlek.MakeCommand("flip", diceCommand),
+			quadlek.MakeCommand("flip", flipCommand),
 		},
 		nil,
 		nil,
