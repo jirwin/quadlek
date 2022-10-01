@@ -76,6 +76,10 @@ func saveSongsHook(ctx context.Context, hookChannel <-chan *quadlek.HookMsg) {
 				tracks = append(tracks, spotify.ID(match))
 			}
 
+			if len(tracks) == 0 {
+				continue
+			}
+
 			err := hookMsg.Store.Get("authtoken-"+getSharedPlaylistUser(), func(val []byte) error {
 				authToken := &v1.AuthToken{}
 				err := proto.Unmarshal(val, authToken)
