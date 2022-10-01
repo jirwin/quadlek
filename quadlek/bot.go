@@ -6,19 +6,15 @@
 package quadlek
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"math/rand"
 	"os"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
-
-	"context"
-
-	"sync"
-
-	"math/rand"
-
-	"errors"
 
 	"github.com/boltdb/bolt"
 	"github.com/slack-go/slack"
@@ -232,9 +228,9 @@ func (b *Bot) Stop() {
 }
 
 // Http wrapper for debugging slack API requests
-//type sniffingClient struct{}
+// type sniffingClient struct{}
 //
-//func (c *sniffingClient) Do(req *http.Request) (*http.Response, error) {
+// func (c *sniffingClient) Do(req *http.Request) (*http.Response, error) {
 //	client := &http.Client{}
 //	r, e := client.Do(req)
 //	if r != nil {
@@ -247,7 +243,7 @@ func (b *Bot) Stop() {
 //		fmt.Println(string(data))
 //	}
 //	return r, e
-//}
+// }
 
 // NewBot creates a new instance of Bot for use.
 //
@@ -269,7 +265,7 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 	if err != nil {
 		return nil, err
 	}
-
+	zap.ReplaceGlobals(log)
 	ctx, cancel := context.WithCancel(parentCtx)
 
 	return &Bot{
