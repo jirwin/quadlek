@@ -2,6 +2,8 @@ package admin
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/jirwin/quadlek/quadlek"
 	"github.com/slack-go/slack"
 	"go.uber.org/zap"
@@ -79,6 +81,25 @@ func restartInteraction(ctx context.Context, interactionChannel <-chan *quadlek.
 	}
 }
 
+func healthCheck(ctx context.Context, whChan <-chan *quadlek.WebhookMsg) {
+	for {
+		select {
+		case whMsg := <-whChan:
+			// respond to webhook
+			whMsg.ResponseWriter.WriteHeader(http.StatusOK)
+			_, err := whMsg.ResponseWriter.Write([]byte{})
+			if err != nil {
+				continue
+			}
+			whMsg.Done <- true
+
+		case <-ctx.Done():
+			zap.L().Info("Exiting healthcheck ")
+			return
+		}
+	}
+}
+
 func Register() quadlek.Plugin {
 	return quadlek.MakePlugin(
 		"admin",
@@ -87,7 +108,9 @@ func Register() quadlek.Plugin {
 		},
 		nil,
 		nil,
-		nil,
+		[]quadlek.Webhook{
+			quadlek.MakeWebhook("healthCheck", healthCheck),
+		},
 		nil,
 	)
 }
