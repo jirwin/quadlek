@@ -254,7 +254,7 @@ func (b *Bot) Stop() {
 // verificationToken is the webhook token that is used to validate webhooks are coming from slack
 //
 // dbPath is the path to the database on the filesystem.
-func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string) (*Bot, error) {
+func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string, debug bool) (*Bot, error) {
 	// Seed the RNG with the current time globally
 	rand.Seed(time.Now().UnixNano())
 
@@ -276,7 +276,7 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string)
 		cancel:               cancel,
 		apiKey:               apiKey,
 		verificationToken:    verificationToken,
-		api:                  slack.New(apiKey, slack.OptionDebug(true)),
+		api:                  slack.New(apiKey, slack.OptionDebug(debug)),
 		channels:             make(map[string]slack.Channel, 10),
 		humanChannels:        make(map[string]slack.Channel),
 		humanUsers:           make(map[string]slack.User),
