@@ -191,7 +191,6 @@ func (b *Bot) handlePluginWebhook(w http.ResponseWriter, r *http.Request) {
 
 	select {
 	case <-done:
-		b.Log.Info("Webhook completed.")
 	case <-time.After(time.Second * 5):
 		b.Log.Info("Webhook timed out.")
 	}
