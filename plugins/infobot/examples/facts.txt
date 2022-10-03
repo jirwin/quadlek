@@ -1,0 +1,7 @@
+roses -> red
+violets -> blue
+one => fish
+two => fish
+red fish => blue fish
+elephant =>
+monkey => a banana eater => yum
