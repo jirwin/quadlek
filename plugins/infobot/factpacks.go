@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 
 	v1 "github.com/jirwin/quadlek/pb/quadlek/plugins/infobot/v1"
 )
@@ -75,7 +75,7 @@ func (fs *lockingFactStore) LoadFactPack(filename string) error {
 	buf := bufio.NewReader(f)
 
 	done := false
-	for done != true {
+	for !done {
 		line, err := buf.ReadString('\n')
 		if err != nil && err == io.EOF {
 			done = true

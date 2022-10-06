@@ -3,9 +3,9 @@ package infobot
 import (
 	"testing"
 
-	"github.com/golang/protobuf/proto"
 	v1 "github.com/jirwin/quadlek/pb/quadlek/plugins/infobot/v1"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestFactStore_LoadFactPack(t *testing.T) {

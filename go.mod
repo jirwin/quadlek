@@ -6,7 +6,6 @@ require (
 	github.com/boltdb/bolt v1.3.1
 	github.com/dghubble/go-twitter v0.0.0-20220608135633-47eb18e5aab5
 	github.com/dghubble/oauth1 v0.7.1
-	github.com/golang/protobuf v1.5.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.2.0
@@ -20,7 +19,7 @@ require (
 	github.com/zmb3/spotify v1.3.0
 	go.uber.org/zap v1.21.0
 	golang.org/x/oauth2 v0.0.0-20220608161450-d0670ef3b1eb
-	google.golang.org/protobuf v1.28.0
+	google.golang.org/protobuf v1.28.1
 	gopkg.in/olivere/elastic.v5 v5.0.86
 	mvdan.cc/xurls/v2 v2.4.0
 )
@@ -31,6 +30,7 @@ require (
 	github.com/dghubble/sling v1.4.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
