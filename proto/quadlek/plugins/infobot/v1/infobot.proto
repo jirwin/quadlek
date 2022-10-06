@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+option go_package = "github.com/jirwin/quadlek/pb/plugins/infobot/v1";
+package quadlek.plugins.infobot.v1;
+
+message Fact {
+  string name = 1;
+  string value = 2;
+  bool is_plural = 3;
+}
+
+message FactStore {
+  map<string, Fact> facts = 1;
+}
