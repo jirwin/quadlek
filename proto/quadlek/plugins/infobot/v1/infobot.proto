@@ -6,7 +6,7 @@ package quadlek.plugins.infobot.v1;
 message Fact {
   string name = 1;
   string value = 2;
-  bool isPlural = 3;
+  bool is_plural = 3;
 }
 
 message FactStore {
