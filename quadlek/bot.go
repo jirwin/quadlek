@@ -46,6 +46,34 @@ type Bot struct {
 	ctx                  context.Context
 	cancel               context.CancelFunc
 	wg                   sync.WaitGroup
+
+	readyChan chan struct{}
+	isRunning bool
+	isStopped bool
+
+	listenAddr string
+	serverPort int
+}
+
+// Running returns a channel that will close when the bot is running;
+// this channel is not aware of the bot stopping.
+// If you need to know if the bot has been stopped,
+// use IsRunning
+func (b *Bot) Running() <-chan struct{} {
+	return b.readyChan
+}
+
+// IsRunning returns whether the bot is running
+func (b *Bot) IsRunning() bool {
+	if b.isStopped {
+		return false
+	}
+	select {
+	case <-b.readyChan:
+		return true
+	default:
+		return false
+	}
 }
 
 // GetUserId returns the Slack user ID for the Bot.
@@ -222,18 +250,25 @@ func (b *Bot) handleEvents() {
 // Start activates the Bot, creating a new API client.
 // It also calls out to the Slack API to obtain all of the channels and users.
 func (b *Bot) Start() {
+	if b.isRunning {
+		b.Log.Error("bot is already running")
+		return
+	}
+	b.isRunning = true
 	go b.WebhookServer()
 	go b.handleEvents()
 	err := b.initInfo()
 	if err != nil {
-		panic(err)
+		b.Log.Panic("failed to init quadlek", zap.Error(err))
 	}
+	close(b.readyChan)
 }
 
 // Stop cancel's the bots main context, closes the DB handle, and disconnects from slack
 func (b *Bot) Stop() {
 	b.cancel()
 	b.wg.Wait()
+	b.isStopped = true
 	if b.db != nil {
 		b.db.Close()
 	}
@@ -257,6 +292,65 @@ func (b *Bot) Stop() {
 //	return r, e
 // }
 
+type options struct {
+	logLevel   zap.AtomicLevel
+	serverPort int
+	listenAddr string
+	debug      bool
+}
+
+func newOptions() *options {
+	return &options{
+		logLevel:   zap.NewAtomicLevel(),
+		serverPort: 8000,
+	}
+}
+
+type Opt func(*options) error
+
+func WithLogLevel(logLevel zap.AtomicLevel) Opt {
+	return func(o *options) error {
+		o.logLevel = logLevel
+		return nil
+	}
+}
+
+func WithLogLevelFromEnvironment() Opt {
+	return func(o *options) error {
+		lvl, err := zap.ParseAtomicLevel(os.Getenv("LOG_LEVEL"))
+		if err != nil {
+			return err
+		}
+		o.logLevel = lvl
+		return nil
+	}
+}
+
+func WithListenAddr(listenAddr string) Opt {
+	return func(o *options) error {
+		o.listenAddr = listenAddr
+		return nil
+	}
+}
+
+func WithServerPort(serverPort int) Opt {
+	return func(o *options) error {
+		if serverPort <= 0 {
+			return fmt.Errorf("invalid server port %d", serverPort)
+		}
+		o.serverPort = serverPort
+		return nil
+	}
+}
+
+// WithDebug sets the logger to use the config provided by zap.NewDevelopmentConfig and sets the Slack API to debug mode
+func WithDebug() Opt {
+	return func(o *options) error {
+		o.debug = true
+		return nil
+	}
+}
+
 // NewBot creates a new instance of Bot for use.
 //
 // apiKey is the Slack API key that the Bot should use to authenticate
@@ -264,7 +358,7 @@ func (b *Bot) Stop() {
 // verificationToken is the webhook token that is used to validate webhooks are coming from slack
 //
 // dbPath is the path to the database on the filesystem.
-func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string, debug bool) (*Bot, error) {
+func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string, opts ...Opt) (*Bot, error) {
 	// Seed the RNG with the current time globally
 	rand.Seed(time.Now().UnixNano())
 
@@ -272,8 +366,23 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string,
 	if err != nil {
 		return nil, err
 	}
+	o := newOptions()
+	for _, opt := range opts {
+		if err := opt(o); err != nil {
+			return nil, err
+		}
+	}
 
-	log, err := zap.NewProduction()
+	var cfg zap.Config
+	if o.debug {
+		cfg = zap.NewDevelopmentConfig()
+	} else {
+		cfg = zap.NewProductionConfig()
+	}
+
+	cfg.Level = o.logLevel
+
+	log, err := cfg.Build()
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +395,7 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string,
 		cancel:               cancel,
 		apiKey:               apiKey,
 		verificationToken:    verificationToken,
-		api:                  slack.New(apiKey, slack.OptionDebug(debug)),
+		api:                  slack.New(apiKey, slack.OptionDebug(o.debug)),
 		channels:             make(map[string]slack.Channel, 10),
 		humanChannels:        make(map[string]slack.Channel),
 		humanUsers:           make(map[string]slack.User),
@@ -300,5 +409,8 @@ func NewBot(parentCtx context.Context, apiKey, verificationToken, dbPath string,
 		reactionHooks:        []*registeredReactionHook{},
 		hooks:                []*registeredHook{},
 		db:                   db,
+		readyChan:            make(chan struct{}),
+		serverPort:           o.serverPort,
+		listenAddr:           o.listenAddr,
 	}, nil
 }

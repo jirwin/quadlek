@@ -207,8 +207,7 @@ func (b *Bot) WebhookServer() {
 	r.HandleFunc("/slack/interaction", b.handleSlackInteraction).Methods("POST")
 	r.HandleFunc("/slack/event", b.handleSlackEvent).Methods("POST")
 
-	// TODO(jirwin): This listen address should be configurable
-	srv := &http.Server{Addr: ":8000", Handler: r}
+	srv := &http.Server{Addr: fmt.Sprintf("%s:%d", b.listenAddr, b.serverPort), Handler: r}
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil {
@@ -228,7 +227,7 @@ func (b *Bot) WebhookServer() {
 
 var InvalidRequestSignature = errors.New("invalid request signature")
 
-// Validates the signature header for slack webhooks
+// ValidateSlackRequest validates the signature header for slack webhooks
 func (b *Bot) ValidateSlackRequest(r *http.Request) error {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
